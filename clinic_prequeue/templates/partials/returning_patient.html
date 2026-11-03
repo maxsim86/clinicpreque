@@ -1,0 +1,27 @@
+<div class="p-4 bg-emerald-50 border border-emerald-300 rounded-xl space-y-3 animate-fade-in my-3">
+    <div class="flex items-center space-x-2 text-emerald-800">
+        <span class="text-xl">👋</span>
+        <span class="text-sm font-bold">Rekod Ditemui: {{ patient.full_name }}</span>
+    </div>
+    <p class="text-xs text-gray-600">Sila pilih sama ada maklumat anda masih sama atau perlu dikemas kini:</p>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+        <!-- Pilihan 1: Tiada Perubahan -->
+        <button type="button" 
+                id="choice-no-change"
+                onclick="selectNoChanges('{{ patient.full_name }}', '{{ patient.phone_number }}', '{{ patient.address }}')"
+                class="p-3 bg-white border-2 border-emerald-500 rounded-xl text-left hover:bg-emerald-100 transition shadow-sm">
+            <span class="block text-sm font-extrabold text-emerald-700">✓ Maklumat Sama</span>
+            <span class="block text-xs text-gray-500 mt-1 leading-tight">Tiada perubahan alamat atau nombor telefon.</span>
+        </button>
+
+        <!-- Pilihan 2: Tukar Alamat / No Tel -->
+        <button type="button" 
+                id="choice-update"
+                onclick="selectUpdateInfo('{{ patient.full_name }}', '{{ patient.phone_number }}', '{{ patient.address }}')"
+                class="p-3 bg-white border-2 border-gray-300 rounded-xl text-left hover:bg-gray-50 transition shadow-sm">
+            <span class="block text-sm font-bold text-gray-800">✎ Tukar Alamat / Tel</span>
+            <span class="block text-xs text-gray-500 mt-1 leading-tight">Kemas kini alamat terkini atau nombor baru.</span>
+        </button>
+    </div>
+</div>

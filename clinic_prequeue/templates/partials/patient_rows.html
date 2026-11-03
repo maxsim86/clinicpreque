@@ -1,0 +1,33 @@
+<!-- templates/partials/patient_rows.html -->
+{% for p in patients %}
+<tr id="patient-row-{{ p.id }}" class="hover:bg-gray-50">
+    <td class="px-4 py-3 text-sm text-gray-500">{{ p.created_at.strftime("%H:%M") }}</td>
+    <td class="px-4 py-3 text-sm font-bold text-blue-600">{{ p.token_code }}</td>
+    <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ p.full_name }}</td>
+    <td class="px-4 py-3 text-sm text-gray-700">{{ p.ic_passport }}</td>
+    <td class="px-4 py-3 text-sm text-gray-700">{{ p.phone_number }}</td>
+    
+    <!-- Kolum Status & Alamat -->
+    <td class="px-4 py-3 text-sm">
+        {% if p.address_status == 'DIKEMASKINI' %}
+            <span class="inline-block px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 rounded mb-1">
+                ⚠️ ALAMAT BAHARU
+            </span>
+            <div class="text-xs text-gray-700 font-medium">{{ p.address }}</div>
+        {% else %}
+            <span class="inline-block px-2 py-0.5 text-xs font-bold bg-green-100 text-green-800 rounded">
+                ✓ ALAMAT KEKAL
+            </span>
+        {% endif %}
+    </td>
+
+    <td class="px-4 py-3 text-right">
+        <button hx-post="/serve-patient/{{ p.id }}"
+                hx-target="#patient-row-{{ p.id }}"
+                hx-swap="outerHTML"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded transition">
+            Selesai
+        </button>
+    </td>
+</tr>
+{% endfor %}
