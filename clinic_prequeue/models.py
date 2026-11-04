@@ -1,4 +1,3 @@
-# models.py
 import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from database import Base
@@ -11,7 +10,8 @@ class PatientQueue(Base):
     full_name = Column(String(150), nullable=False)
     phone_number = Column(String(20), nullable=False)
     
-    # Status alamat: 'KEKAL' atau 'DIKEMASKINI'
+    # Lajur yang menyebabkan ralat jika tertinggal:
+    visit_purpose = Column(String(50), nullable=False, default="SAKIT_BIASA")
     address_status = Column(String(20), default="KEKAL")
     address = Column(String(255), nullable=False)
     

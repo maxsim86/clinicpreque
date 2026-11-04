@@ -1,0 +1,41 @@
+<div id="form-container" style="
+    background: #ffffff; 
+    max-width: 480px; 
+    width: 100%; 
+    border-radius: 16px; 
+    padding: 28px 20px; 
+    text-align: center; 
+    border-top: 8px solid #059669; 
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    margin: auto;
+">
+    <div style="
+        width: 56px; 
+        height: 56px; 
+        background-color: #d1fae5; 
+        color: #059669; 
+        border-radius: 50%; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        margin: 0 auto 12px auto; 
+        font-size: 28px; 
+        font-weight: 900;
+    ">✓</div>
+
+    <h2 style="margin: 0 0 4px 0; font-size: 22px; font-weight: 800; color: #1e293b;">Pendaftaran Berjaya!</h2>
+    <p style="margin: 0; font-size: 13px; color: #64748b;">Tunjukkan kod QR ini kepada staf di kaunter:</p>
+    
+    <div style="margin: 16px auto; display: inline-block; padding: 10px; background: #fff; border: 2px solid #e2e8f0; border-radius: 12px;">
+        <img src="/qr/{{ token }}" alt="QR Kod Pesakit" style="width: 180px; height: 180px; display: block; margin: auto;">
+    </div>
+
+    <div style="margin-bottom: 16px;">
+        <span style="font-size: 12px; color: #64748b; display: block;">No. Rujukan Token:</span>
+        <span style="font-size: 32px; font-weight: 900; letter-spacing: 3px; color: #1d4ed8; font-family: monospace;">{{ token }}</span>
+    </div>
+
+    <p style="margin: 0; font-size: 13px; font-weight: 600; color: #334155; line-height: 1.4;">
+        Sila ke kaunter saringan atau pendaftaran sekarang.
+    </p>
+</div>
