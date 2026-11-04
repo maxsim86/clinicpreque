@@ -28,9 +28,15 @@
         </button>
     </td>
 
-    <!-- 5. No. Telefon -->
+    <!-- 5. No. Telefon (DITAMBAH BUTANG SALIN) -->
     <td class="px-5 py-4 text-xs font-medium text-slate-600 whitespace-nowrap">
-        {{ p.phone_number }}
+        <span>{{ p.phone_number }}</span>
+        <button type="button" 
+                onclick="copyToClipboard('{{ p.phone_number }}', 'No. Telefon')" 
+                class="copy-btn" 
+                title="Salin No. Telefon">
+            📋 Salin
+        </button>
     </td>
 
     <!-- 6. Tujuan Kehadiran -->
@@ -57,9 +63,17 @@
     <!-- 7. Status & Alamat -->
     <td class="px-5 py-4 text-xs max-w-xs">
         {% if p.address_status == 'DIKEMASKINI' %}
-            <span class="inline-block px-2 py-0.5 font-black text-[10px] bg-amber-100 text-amber-900 rounded mb-1">
-                ⚠️ ALAMAT BAHARU
-            </span>
+            <div class="flex items-center justify-between mb-1">
+                <span class="inline-block px-2 py-0.5 font-black text-[10px] bg-amber-100 text-amber-900 rounded">
+                    ⚠️ ALAMAT BAHARU
+                </span>
+                <button type="button" 
+                        onclick="copyToClipboard('{{ p.address | replace('\'', '\\\'') }}', 'Alamat')" 
+                        class="copy-btn text-[10px]" 
+                        title="Salin Alamat Baharu">
+                    📋 Salin
+                </button>
+            </div>
             <div class="text-slate-700 truncate font-semibold" title="{{ p.address }}">{{ p.address }}</div>
         {% else %}
             <span class="inline-block px-2 py-0.5 font-bold text-[10px] bg-emerald-100 text-emerald-800 rounded">
@@ -67,6 +81,19 @@
             </span>
         {% endif %}
     </td>
+
+
+    <td class="px-5 py-4 text-right whitespace-nowrap space-x-1">
+    <!-- Butang Suntikan Automatik ke SystmOne -->
+    <button type="button" 
+            onclick="injectToSystmOne('{{ p.ic_passport }}', '{{ p.full_name }}', '{{ p.phone_number }}', '{{ p.address }}')"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg shadow-sm transition"
+            title="Suntik data terus ke SystmOne">
+        ⚡ SystmOne
+    </button>
+
+
+
 
     <!-- 8. Tindakan Selesai -->
     <td class="px-5 py-4 text-right whitespace-nowrap">

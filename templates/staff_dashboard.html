@@ -113,28 +113,82 @@
     </div>
 
     <script>
-        function copyToClipboard(text) {
-            const cleanText = text.replace(/[^a-zA-Z0-9]/g, '');
-            navigator.clipboard.writeText(cleanText).then(() => {
-                const toast = document.getElementById('toast-alert');
-                toast.style.display = 'block';
-                setTimeout(() => {
-                    toast.style.display = 'none';
-                }, 2200);
-            }).catch(err => {
-                console.error("Gagal menyalin teks: ", err);
-            });
-        }
 
-        // Sokongan Pengimbas Barcode / QR Scanner Fizikal
-        document.addEventListener('keydown', function(e) {
-            const searchInput = document.getElementById('search-input');
-            if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-                if (e.key.length === 1 || e.key === 'Enter') {
-                    searchInput.focus();
-                }
-            }
+
+        async function injectToSystmOne(ic, name, phone, address) {
+    const toast = document.getElementById('toast-alert');
+    
+    // Beri amaran kepada staf supaya klik kotak SystmOne serta-merta
+    if (toast) {
+        toast.innerText = "⏳ KLIK KOTAK SYSTMONE SEKARANG! (Penaipan bermula dalam 2 saat)";
+        toast.style.background = "#d97706"; // Warna amaran jingga
+        toast.style.display = 'block';
+    }
+
+    try {
+        const response = await fetch('http://127.0.0.1:9999/inject', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ic: ic,
+                name: name,
+                phone: phone,
+                address: address
+            })
         });
+
+        const res = await response.json();
+        
+        if (toast) {
+            toast.innerText = "✓ Selesai! Data berjaya ditaip ke SystmOne.";
+            toast.style.background = "#15803d"; // Warna hijau berjaya
+            setTimeout(() => { toast.style.display = 'none'; }, 2500);
+        }
+    } catch (err) {
+        console.error("Helper tidak berjalan:", err);
+        if (toast) {
+            toast.innerText = "⚠️ Ralat: Sila pastikan systmone_helper.py sedang berjalan di PC ini!";
+            toast.style.background = "#b91c1c"; // Warna merah
+            setTimeout(() => { toast.style.display = 'none'; }, 4000);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+        function copyToClipboard(text, label = "Data") {
+    if (!text || text === "None") return;
+
+    let textToCopy = text.trim();
+
+    // Jika No. KP atau No. Telefon, bersihkan simbol khas/sengkang supaya serasi SystmOne
+    if (label === "No. KP" || label === "No. Telefon") {
+        textToCopy = textToCopy.replace(/[^0-9]/g, '');
+    }
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        const toast = document.getElementById('toast-alert');
+        if (toast) {
+            toast.innerText = `✓ ${label} disalin ke clipboard! Tekan Ctrl + V di SystmOne.`;
+            toast.style.background = "#0f172a";
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2200);
+        }
+    }).catch(err => {
+        console.error("Gagal menyalin teks: ", err);
+    });
+}
     </script>
 </body>
 </html>
