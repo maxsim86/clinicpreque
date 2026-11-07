@@ -1,42 +1,75 @@
-<div class="bg-white border-2 border-blue-500 rounded-3xl p-5 shadow-sm space-y-3">
+<!-- templates/partials/active_patient_card.html -->
+<div class="bg-white border-2 border-blue-500 rounded-3xl p-5 shadow-sm space-y-3 animate-fade-in">
     <!-- Input Tersembunyi: Membawa ID pesakit ke dalam borang triage-form -->
     <input type="hidden" name="patient_id" value="{{ p.id }}" form="triage-form">
 
+    <!-- Bahagian Tajuk, Token & Masa Tiba -->
     <div class="flex justify-between items-start border-b border-slate-100 pb-3">
         <div>
-            <span class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-lg tracking-wider">Token: {{ p.token_code }}</span>
+            <div id="token-container-{{ p.id }}" class="flex items-center gap-1.5">
+                <span class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-lg tracking-wider">
+                    Token: {{ p.token_code }}
+                </span>
+                <button type="button" 
+                        hx-get="/counter/edit-token/{{ p.id }}" 
+                        hx-target="#token-container-{{ p.id }}" 
+                        hx-swap="outerHTML"
+                        class="text-xs text-slate-400 hover:text-blue-600 px-1 py-0.5 rounded hover:bg-slate-100 transition inline-flex items-center gap-1" 
+                        title="Edit nombor ini">
+                    <span>✏️</span>
+                    <span class="font-bold text-[11px]">Edit</span>
+                </button>
+            </div>
             <h2 class="text-lg font-black text-slate-900 mt-2 tracking-tight">{{ p.full_name }}</h2>
         </div>
-        <span class="text-xs text-slate-400 font-bold">Tiba: {{ p.created_at.strftime("%H:%M") if p.created_at else "-" }}</span>
+        <span class="text-xs text-slate-400 font-bold whitespace-nowrap">
+            Tiba: {{ p.created_at.strftime("%H:%M") if p.created_at else "-" }}
+        </span>
     </div>
 
+    <!-- Grid No. KP & Telefon -->
     <div class="grid grid-cols-2 gap-2 text-xs">
         <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 flex justify-between items-center">
-            <div>
+            <div class="truncate mr-1">
                 <span class="text-[10px] font-bold text-slate-400 uppercase block">No. KP</span>
-                <span class="font-extrabold text-slate-800">{{ p.ic_passport }}</span>
+                <span class="font-extrabold text-slate-800 tracking-wide">{{ p.ic_passport }}</span>
             </div>
-            <button type="button" onclick="quickCopy('{{ p.ic_passport }}', 'No. KP')" class="p-1 rounded bg-white border border-slate-200 font-bold text-slate-600">📋</button>
+            <button type="button" 
+                    onclick="quickCopy('{{ p.ic_passport }}', 'No. KP')" 
+                    class="p-1 rounded bg-white hover:bg-slate-100 border border-slate-200 font-bold text-slate-600 shrink-0 transition" 
+                    title="Salin No. KP">
+                📋
+            </button>
         </div>
 
         <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 flex justify-between items-center">
-            <div>
+            <div class="truncate mr-1">
                 <span class="text-[10px] font-bold text-slate-400 uppercase block">Telefon</span>
                 <span class="font-extrabold text-slate-800">{{ p.phone_number }}</span>
             </div>
-            <button type="button" onclick="quickCopy('{{ p.phone_number }}', 'Telefon')" class="p-1 rounded bg-white border border-slate-200 font-bold text-slate-600">📋</button>
+            <button type="button" 
+                    onclick="quickCopy('{{ p.phone_number }}', 'Telefon')" 
+                    class="p-1 rounded bg-white hover:bg-slate-100 border border-slate-200 font-bold text-slate-600 shrink-0 transition" 
+                    title="Salin No. Telefon">
+                📋
+            </button>
         </div>
     </div>
 
+    <!-- Status Alamat & Kediaman -->
     <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/70 text-xs">
         <div class="flex justify-between items-center mb-1">
             <span class="text-[10px] font-black text-slate-400 uppercase">Status Alamat</span>
             {% if p.address_status == 'DIKEMASKINI' %}
-                <span class="bg-amber-100 text-amber-900 text-[10px] font-black px-1.5 py-0.5 rounded">⚠️ ALAMAT BAHARU</span>
+                <span class="bg-amber-100 text-amber-900 text-[10px] font-black px-1.5 py-0.5 rounded">
+                    ⚠️ ALAMAT BAHARU
+                </span>
             {% else %}
-                <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">✓ REKOD KEKAL</span>
+                <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    ✓ REKOD KEKAL
+                </span>
             {% endif %}
         </div>
-        <p class="font-semibold text-slate-700 truncate text-[11px]">{{ p.address }}</p>
+        <p class="font-semibold text-slate-700 truncate text-[11px]" title="{{ p.address }}">{{ p.address }}</p>
     </div>
 </div>

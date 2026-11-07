@@ -12,11 +12,9 @@ from services.postcode import check_pandamaran_zone
 router = APIRouter(tags=["Patient"])
 templates = Jinja2Templates(directory="templates")
 
-# routers/patient.py
 
 @router.get("/register", response_class=HTMLResponse)
 def get_patient_form(request: Request, lang: str = "bm", elderly: str = "false"):
-    # Tukar string kepada boolean sebenar
     is_elderly = elderly.lower() in ["true", "1", "yes"]
     texts = TRANSLATIONS.get(lang, TRANSLATIONS["bm"])
     return templates.TemplateResponse(
@@ -25,9 +23,9 @@ def get_patient_form(request: Request, lang: str = "bm", elderly: str = "false")
         context={"t": texts, "lang": lang, "elderly": is_elderly}
     )
 
+
 @router.get("/get-form-content", response_class=HTMLResponse)
 def get_form_content(request: Request, lang: str = "bm", elderly: str = "false"):
-    # Tukar string kepada boolean sebenar
     is_elderly = elderly.lower() in ["true", "1", "yes"]
     texts = TRANSLATIONS.get(lang, TRANSLATIONS["bm"])
     return templates.TemplateResponse(
@@ -36,14 +34,17 @@ def get_form_content(request: Request, lang: str = "bm", elderly: str = "false")
         context={"t": texts, "lang": lang, "elderly": is_elderly}
     )
 
+
 @router.get("/api/lookup-postcode/{postcode}")
 def api_lookup_postcode(postcode: str):
     return check_pandamaran_zone(postcode)
+
 
 @router.get("/qr/{token_code}")
 def get_qr_image(token_code: str):
     buf = create_qr_buffer(token_code)
     return StreamingResponse(buf, media_type="image/png")
+
 
 @router.get("/check-ic", response_class=HTMLResponse)
 def check_returning_patient(request: Request, ic_passport: str = "", db: Session = Depends(get_db)):
@@ -51,9 +52,12 @@ def check_returning_patient(request: Request, ic_passport: str = "", db: Session
     if len(clean_ic) < 8:
         return Response(content="", status_code=200)
 
-    patient = db.query(PatientQueue).filter(
-        PatientQueue.ic_passport == clean_ic
-    ).order_by(PatientQueue.id.desc()).first()
+    patient = (
+        db.query(PatientQueue)
+        .filter(PatientQueue.ic_passport == clean_ic)
+        .order_by(PatientQueue.id.desc())
+        .first()
+    )
 
     if patient:
         return templates.TemplateResponse(
@@ -62,6 +66,7 @@ def check_returning_patient(request: Request, ic_passport: str = "", db: Session
             context={"patient": patient}
         )
     return Response(content="", status_code=200)
+
 
 @router.post("/submit-patient", response_class=HTMLResponse)
 def submit_patient(
@@ -74,8 +79,12 @@ def submit_patient(
     address: str = Form("KEKAL SEPERTI REKOD SEDIA ADA"),
     db: Session = Depends(get_db)
 ):
-    token = generate_purpose_token(visit_purpose)
-    final_address = address.strip().upper() if address_status == "DIKEMASKINI" else "KEKAL SEPERTI REKOD SEDIA ADA"
+    token = generate_purpose_token(visit_purpose, db)
+    final_address = (
+        address.strip().upper() 
+        if address_status == "DIKEMASKINI" 
+        else "KEKAL SEPERTI REKOD SEDIA ADA"
+    )
 
     record = PatientQueue(
         ic_passport=ic_passport.strip().upper(),
@@ -88,9 +97,10 @@ def submit_patient(
     )
     db.add(record)
     db.commit()
+    db.refresh(record)
 
     return templates.TemplateResponse(
         request=request,
         name="partials/success_token.html",
-        context={"token": token}
+        context={"token": token, "patient": record}
     )
