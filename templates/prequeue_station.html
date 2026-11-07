@@ -201,55 +201,85 @@
             <div id="feedback-zone"></div>
         </div>
 
-        <!-- ================= BAHAGIAN KANAN (5 Kolum): SENARAI MENUNGGU 4 LAJUR ================= -->
-        <div class="lg:col-span-5 bg-white border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col h-[calc(100vh-120px)]">
-            
-            <div class="flex justify-between items-center mb-3 px-1">
-                <h2 class="text-sm font-black text-slate-800 tracking-tight">Senarai Pra-Daftar Menunggu</h2>
-                <span class="text-[11px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">Live HTMX (3s)</span>
-            </div>
-
-<input type="text" 
-       id="search-input" 
-       name="search" 
-       placeholder="Imbas Kod Bar / Taip Carian..."
-       hx-get="/counter/queue-rows"
-       hx-trigger="keyup changed delay:250ms, search"
-       hx-target="#queue-table-body"
-       class="...">
-
-            <!-- Jadual 4 Lajur Kemas -->
-            <div class="overflow-y-auto flex-1 border border-slate-100 rounded-2xl">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead class="bg-slate-50 sticky top-0 border-b border-slate-200/80 text-slate-400 uppercase font-black text-[10px] tracking-wider">
-                        <tr>
-                            <th class="p-3">Masa</th>
-                            <th class="p-3">Token</th>
-                            <th class="p-3">Nama Pesakit</th>
-                            <th class="p-3 text-right">Pilih</th>
-                        </tr>
-                    </thead>
-
-                    <!-- Menggunakan serpihan 4 lajur: station_rows.html -->
-                    
-                    <tbody id="queue-table-body" 
-       hx-get="/counter/queue-rows" 
-       hx-trigger="every 3s, refreshQueue from:body" 
-       hx-include="#search-input"
-       class="divide-y divide-slate-100">
-    {% include "partials/station_rows.html" %}
-</tbody>
-
-
-                </table>
-            </div>
-
+        <!-- ================= BAHAGIAN KANAN (5 Kolum): SENARAI MENUNGGU ================= -->
+<div class="lg:col-span-5 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col h-[calc(100vh-120px)]">
+    
+    <!-- Header Senarai dengan Counter Badge -->
+    <div class="flex justify-between items-center mb-3.5">
+        <div class="flex items-center gap-2">
+            <h2 class="text-sm font-black text-slate-900 tracking-tight">Senarai Pra-Daftar Menunggu</h2>
+            <span class="bg-blue-100 text-blue-800 text-[11px] font-black px-2 py-0.5 rounded-full" id="queue-count-badge">
+                {{ patients|length }}
+            </span>
         </div>
+        <span class="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full border border-slate-200">Live HTMX (3s)</span>
+    </div>
+
+    <!-- Kotak Carian Jelas & Mesra Barcode Scanner -->
+    <div class="relative mb-3.5">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+        </div>
+        <input type="text" 
+               id="search-input" 
+               name="search" 
+               placeholder="Imbas Kod Bar / Taip No. KP, Nama, Token..."
+               hx-get="/counter/queue-rows"
+               hx-trigger="keyup changed delay:250ms, search"
+               hx-target="#queue-table-body"
+               class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold uppercase outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition shadow-inner">
+    </div>
+
+    <!-- Jadual Senarai Pesakit -->
+    <div class="overflow-y-auto flex-1 border border-slate-200/80 rounded-2xl">
+        <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-50/90 sticky top-0 border-b border-slate-200 text-slate-400 uppercase font-black text-[10px] tracking-wider z-10">
+                <tr>
+                    <th class="p-3 w-16">Masa</th>
+                    <th class="p-3 w-28">Pas Daftar</th>
+                    <th class="p-3">Nama Pesakit</th>
+                    <th class="p-3 text-right w-20">Tindakan</th>
+                </tr>
+            </thead>
+
+            <tbody id="queue-table-body" 
+                   hx-get="/counter/queue-rows" 
+                   hx-trigger="every 3s, refreshQueue from:body" 
+                   hx-include="#search-input"
+                   class="divide-y divide-slate-100">
+                {% include "partials/station_rows.html" %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+
+
 
     </div>
 
     <!-- Logik Pengendali JS Ringkas -->
     <script>
+
+        function highlightRow(rowId) {
+    // Buang kelas aktif dari semua baris
+    document.querySelectorAll('#queue-table-body tr').forEach(r => {
+        r.classList.remove('bg-blue-50', 'border-l-4', 'border-l-blue-600');
+    });
+
+    // Tambah warna aktif pada baris yang dipilih
+    const targetRow = document.getElementById(rowId);
+    if (targetRow) {
+        targetRow.classList.add('bg-blue-50', 'border-l-4', 'border-l-blue-600');
+    }
+}
+
+
+
+
         function toggleBloodPanel(show) {
             const panel = document.getElementById('blood-test-options');
             if (show) {
