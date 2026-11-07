@@ -9,6 +9,7 @@ from sqlalchemy import or_
 
 from core.database import get_db
 from models.queue import PatientQueue
+from services.systmone_bot import trigger_systmone_ticket
 
 router = APIRouter(prefix="/counter", tags=["Counter"])
 templates = Jinja2Templates(directory="templates")
@@ -113,12 +114,43 @@ def get_patient_card(request: Request, patient_id: int, db: Session = Depends(ge
         context={"p": patient}
     )
 
+@router.get("/station/scan-select/{scanned_code}", response_class=HTMLResponse)
+def scan_select_patient(request: Request, scanned_code: str, db: Session = Depends(get_db)):
+    """
+    Dipanggil apabila staf mengimbas kod QR di telefon pesakit
+    Menerima token_code (cth: A00015) atau No. KP (cth: 860118086111)
+    """
+    clean_code = scanned_code.strip().upper().replace("-", "")
+    
+    patient = db.query(PatientQueue).filter(
+        or_(
+            PatientQueue.token_code == scanned_code.strip().upper(),
+            PatientQueue.ic_passport.like(f"%{clean_code}%")
+        ),
+        PatientQueue.is_served == False
+    ).order_by(PatientQueue.id.desc()).first()
+
+    if not patient:
+        return HTMLResponse("""
+            <div class="bg-rose-50 border-2 border-rose-300 rounded-3xl p-6 text-center text-rose-800 animate-fade-in">
+                <span class="text-3xl block mb-1">⚠️</span>
+                <p class="font-extrabold text-sm">Pesakit Tidak Ditemui!</p>
+                <p class="text-xs text-rose-600 mt-1">Sila pastikan pesakit telah mengisi borang pra-pendaftaran di telefon.</p>
+            </div>
+        """)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/active_patient_card.html",
+        context={"p": patient}
+    )
+
 @router.post("/station/process-ticket", response_class=HTMLResponse)
 def process_station_ticket(
     request: Request,
     patient_id: Optional[int] = Form(None),
-    category: str = Form(...),
-    prefix: str = Form(...),
+    category: str = Form(...),       # Nilai 'OPD' atau 'MCH' dihantar dari butang
+    prefix: str = Form(...),         # Nilai 'D' (OPD), 'M' (MCH), dll.
     is_blood_test: Optional[bool] = Form(False),
     fasting: Optional[str] = Form(None),
     test_type: Optional[List[str]] = Form([]),
@@ -140,13 +172,16 @@ def process_station_ticket(
             </div>
         """)
 
-    # 1. Format Nombor Giliran (Mencegah awalan berulang seperti D-D00001)
+    # 1. PANGGIL SYSTMONE AUTOMATION (Tukar tab & cetak ikut kategori di latar belakang)
+    trigger_systmone_ticket(category=category)
+
+    # 2. Format Nombor Giliran (Mencegah awalan berulang seperti D-D00001)
     if patient.token_code.startswith(prefix):
         generated_ticket = patient.token_code
     else:
         generated_ticket = f"{prefix}-{patient.token_code}"
     
-    # 2. Kemas kini data ujian makmal & status giliran
+    # 3. Kemas kini data ujian makmal & status giliran
     patient.systmone_queue_no = generated_ticket
     patient.is_blood_test = bool(is_blood_test)
     patient.lab_tests = ", ".join(test_type) if test_type else None
@@ -154,7 +189,7 @@ def process_station_ticket(
     patient.lab_notes = lab_notes.strip() if lab_notes else None
     db.commit()
 
-    # 3. Panggilan Cetak Terma Bixolon SRP-350III
+    # 4. Panggilan Cetak Terma Bixolon SRP-350III (Slip Makmal / Tiket Fizikal)
     # from services.printer import print_blood_test_ticket
     # print_blood_test_ticket(
     #     patient_name=patient.full_name,
@@ -165,12 +200,12 @@ def process_station_ticket(
     #     notes=lab_notes
     # )
 
-    # 4. Maklum balas UI dan trigger HTMX
+    # 5. Maklum balas UI dan trigger HTMX
     response_html = f"""
     <div class="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 text-xs font-bold flex justify-between items-center shadow-sm animate-fade-in">
         <div class="flex items-center gap-2">
             <span class="text-base">✓</span>
-            <span>Tiket <span class="text-blue-700 underline font-black">[{generated_ticket}]</span> ({category}) berjaya diproses!</span>
+            <span>Tiket <span class="text-blue-700 underline font-black">[{generated_ticket}]</span> ({category}) berjaya diproses & dicetuskan ke SystmOne!</span>
         </div>
         <span class="text-[10px] text-emerald-700 font-semibold bg-emerald-100/70 px-2 py-0.5 rounded-full">Sedia ke Ruang Menunggu</span>
     </div>

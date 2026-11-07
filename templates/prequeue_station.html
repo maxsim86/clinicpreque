@@ -264,6 +264,31 @@
     <!-- Logik Pengendali JS Ringkas -->
     <script>
 
+    // Tambah di bahagian <script> templates/prequeue_station.html
+
+const searchInput = document.getElementById('search-input');
+
+searchInput.addEventListener('keydown', function(e) {
+    // Pengimbas barcode biasanya menghantar kekunci 'Enter' di hujung imbasan
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const scannedCode = this.value.trim().toUpperCase();
+        if (!scannedCode) return;
+
+        // Panggil endpoint untuk terus load kad pesakit berdasarkan kod token / No. KP
+        htmx.ajax('GET', `/counter/station/scan-select/${scannedCode}`, {
+            target: '#active-patient-zone',
+            swap: 'innerHTML'
+        });
+
+        // Kosongkan semula kotak carian untuk imbasan pesakit seterusnya
+        this.value = '';
+    }
+});
+
+
+
+
         function highlightRow(rowId) {
     // Buang kelas aktif dari semua baris
     document.querySelectorAll('#queue-table-body tr').forEach(r => {
