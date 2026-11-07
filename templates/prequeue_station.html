@@ -89,6 +89,35 @@
                             </label>
                         </div>
 
+
+                        <!-- Cadangan Bahagian Saringan Tambahan di Stesen Pre-Queue -->
+<div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 mt-3">
+    <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">
+        📌 Saringan & Prosedur Khas (Tandakan jika ada):
+    </span>
+    
+    <div class="grid grid-cols-3 gap-1.5 text-[11px] font-bold text-slate-700">
+        <label class="bg-white border border-slate-200 p-2 rounded-xl flex items-center gap-1.5 cursor-pointer has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-400">
+            <input type="checkbox" name="special_service" value="ECG" class="rounded text-indigo-600"> 🫀 Ujian ECG
+        </label>
+        <label class="bg-white border border-slate-200 p-2 rounded-xl flex items-center gap-1.5 cursor-pointer has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-400">
+            <input type="checkbox" name="special_service" value="FUNDUS" class="rounded text-indigo-600"> 👁️ Saringan Mata (Fundus)
+        </label>
+        <label class="bg-white border border-slate-200 p-2 rounded-xl flex items-center gap-1.5 cursor-pointer has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-400">
+            <input type="checkbox" name="special_service" value="DFE" class="rounded text-indigo-600"> 🦶 Kaki Diabetik (DFE)
+        </label>
+        <label class="bg-white border border-slate-200 p-2 rounded-xl flex items-center gap-1.5 cursor-pointer has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-400">
+            <input type="checkbox" name="special_service" value="BUKA_JAHITAN" class="rounded text-indigo-600"> ✂️ Buka Jahitan (TRS)
+        </label>
+        <label class="bg-white border border-slate-200 p-2 rounded-xl flex items-center gap-1.5 cursor-pointer has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-400">
+            <input type="checkbox" name="special_service" value="PAP_SMEAR" class="rounded text-indigo-600"> 🔬 Pap Smear / HPV
+        </label>
+        <label class="bg-white border border-slate-200 p-2 rounded-xl flex items-center gap-1.5 cursor-pointer has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-400">
+            <input type="checkbox" name="special_service" value="CHECKUP" class="rounded text-indigo-600"> 📋 Medical Check-up
+        </label>
+    </div>
+</div>
+
                         <!-- Senarai Ujian Darah -->
                         <div class="grid grid-cols-3 gap-2 text-xs font-bold text-slate-700">
                             <label class="bg-white border-2 border-slate-200 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:text-blue-900 transition">
@@ -139,6 +168,13 @@
                             <span class="font-black text-sm text-amber-950">OPD - Dressing / Prosedur</span>
                             <span class="text-[10px] font-black text-amber-600 bg-white px-2 py-0.5 rounded-md border border-amber-200 mt-2">Prefix: [ P ]</span>
                         </button>
+
+                        <!-- 2. Temujanji Pakar / FMS (KATEGORI BAHARU) -->
+    <button type="submit" onclick="setCategoryAndPrefix('PAKAR', 'S')" class="flex flex-col items-start p-3.5 rounded-2xl border-2 border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100/80 text-left">
+        <span class="text-xl mb-1">🩺</span>
+        <span class="font-black text-xs text-indigo-950">Temujanji Pakar / FMS</span>
+        <span class="text-[9px] font-black text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200 mt-1.5">Prefix: [ S ]</span>
+    </button>
 
                         <!-- 3. MCH Ibu & Anak -->
                         <button type="submit" 
