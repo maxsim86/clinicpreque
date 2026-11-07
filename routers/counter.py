@@ -151,11 +151,9 @@ def get_queue_rows(
     request: Request, 
     search: str = "", 
     purpose_filter: str = "ALL", 
+    station_mode: bool = False,
     db: Session = Depends(get_db)
 ):
-    """
-    Serpihan jadual senarai giliran pesakit (HTMX Polling & Search)
-    """
     query = db.query(PatientQueue).filter(PatientQueue.is_served == False)
 
     if purpose_filter and purpose_filter != "ALL":
@@ -173,6 +171,17 @@ def get_queue_rows(
         )
 
     patients = query.order_by(PatientQueue.created_at.asc()).all()
+
+    # Jika request datang daripada /counter/station, pulangkan baris 4 lajur (station_rows.html)
+    referer = request.headers.get("referer", "")
+    if "station" in referer or station_mode:
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/station_rows.html",
+            context={"patients": patients}
+        )
+
+    # Default untuk dashboard kaunter utama (/counter)
     return templates.TemplateResponse(
         request=request,
         name="partials/patient_rows.html",

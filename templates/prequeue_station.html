@@ -173,18 +173,14 @@
                 <span class="text-[11px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">Live HTMX (3s)</span>
             </div>
 
-            <!-- Input Carian / Pengimbas Kod Bar -->
-            <div class="relative mb-3">
-                <input type="text" 
-                       id="search-input" 
-                       name="search" 
-                       placeholder="Imbas Kod Bar / Taip Carian..."
-                       hx-get="/counter/station/queue-rows"
-                       hx-trigger="keyup changed delay:250ms, search"
-                       hx-target="#queue-table-body"
-                       class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-bold uppercase outline-none focus:bg-white focus:border-blue-500 transition">
-                <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
-            </div>
+<input type="text" 
+       id="search-input" 
+       name="search" 
+       placeholder="Imbas Kod Bar / Taip Carian..."
+       hx-get="/counter/queue-rows"
+       hx-trigger="keyup changed delay:250ms, search"
+       hx-target="#queue-table-body"
+       class="...">
 
             <!-- Jadual 4 Lajur Kemas -->
             <div class="overflow-y-auto flex-1 border border-slate-100 rounded-2xl">
@@ -199,13 +195,16 @@
                     </thead>
 
                     <!-- Menggunakan serpihan 4 lajur: station_rows.html -->
+                    
                     <tbody id="queue-table-body" 
-                           hx-get="/counter/station/queue-rows" 
-                           hx-trigger="every 3s, refreshQueue from:body" 
-                           hx-include="#search-input"
-                           class="divide-y divide-slate-100">
-                        {% include "partials/station_rows.html" %}
-                    </tbody>
+       hx-get="/counter/queue-rows" 
+       hx-trigger="every 3s, refreshQueue from:body" 
+       hx-include="#search-input"
+       class="divide-y divide-slate-100">
+    {% include "partials/station_rows.html" %}
+</tbody>
+
+
                 </table>
             </div>
 
