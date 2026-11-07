@@ -4,101 +4,97 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Papan Pemuka Kaunter - KK Pandamaran</title>
+    <script src="{{ url_for('static', path='js/htmx.min.js') }}"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
-        .dashboard-container { max-width: 1350px; margin: 0 auto; }
-        .table-box { background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { background-color: #f8fafc; padding: 12px 16px; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
-        tr:hover { background-color: #f8fafc; }
-        .copy-btn { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 6px; cursor: pointer; font-size: 11px; font-weight: 600; color: #334155; margin-left: 6px; transition: 0.15s; }
-        .copy-btn:hover { background: #e2e8f0; color: #1e293b; }
-        .copy-btn:active { background: #dcfce7; color: #15803d; border-color: #86efac; }
-        #toast-alert { position: fixed; bottom: 20px; right: 20px; background: #0f172a; color: #ffffff; padding: 10px 18px; border-radius: 8px; font-size: 12px; font-weight: 600; display: none; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        /* Pembetulan sintaks daripada '-' kepada '*' */
+        * { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+        /* Kunci saiz fizikal SVG jika pelayar offline daripada CDN */
+        svg {
+            display: inline-block;
+            vertical-align: middle;
+        }
     </style>
 </head>
-<body class="bg-slate-50 p-4 sm:p-6">
+<body class="bg-slate-50 min-h-screen p-4 sm:p-6 text-slate-800">
 
-    <div class="dashboard-container max-w-7xl mx-auto space-y-5">
+    <div class="max-w-7xl mx-auto space-y-4">
         
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div>
-                <div class="flex items-center gap-2">
-                    <span class="inline-block px-2.5 py-0.5 text-xs font-black bg-blue-100 text-blue-800 rounded-full">
-                        KK PANDAMARAN
-                    </span>
-                    <span class="text-xs font-bold text-slate-400">• Unit Pendaftaran / Triage</span>
+        <!-- Bar Header Utama -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white px-6 py-4 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-md shadow-blue-500/20">
+                    KKP
                 </div>
-                <h1 class="text-2xl font-black text-slate-800 mt-1">Senarai Pra-Pendaftaran Kaunter</h1>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-black uppercase text-blue-700">Klinik Kesihatan Pandamaran</span>
+                        <span class="text-slate-300">•</span>
+                        <span class="text-xs font-semibold text-slate-500">Unit Pendaftaran / Triage</span>
+                    </div>
+                    <h1 class="text-lg font-black text-slate-900 tracking-tight">Senarai Pra-Pendaftaran Kaunter</h1>
+                </div>
             </div>
 
-            <div class="flex items-center gap-3">
-                <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 text-xs font-semibold text-slate-600">
-                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
+            <!-- Polling Live Pill Status -->
+            <div class="flex items-center gap-2.5">
+                <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200/60 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-700">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span>Live Polling (4s)</span>
                 </div>
+                <button onclick="htmx.trigger('#search-input', 'keyup')" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition" title="Muat Semula">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
             </div>
         </div>
 
-        <!-- Carian & Penapis -->
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div class="md:col-span-2 relative">
-                    <input type="text" 
-                           name="search" 
-                           id="search-input"
-                           placeholder="Cari Nama, No. KP (cth: 900101...), Kod Token (cth: D-102), atau Telefon..." 
-                           hx-get="/counter/queue-rows" 
-                           hx-trigger="keyup changed delay:300ms, search" 
-                           hx-target="#patient-list" 
-                           hx-include="#purpose-select"
-                           class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none uppercase font-medium">
-                    <span class="absolute left-3.5 top-2.5 text-slate-400 text-base">🔍</span>
+        <!-- Bar Kawalan Carian & Penapis Aliran Bilik -->
+        <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-2.5">
+            <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
+                <input type="text" id="search-input" name="search"
+                       placeholder="Cari Nama, No. KP (cth: 860118...), Kod Token (cth: A-T6D), atau Telefon..."
+                       hx-get="/counter/queue-rows" hx-trigger="keyup changed delay:250ms, search"
+                       hx-target="#patient-list" hx-include="#purpose-select"
+                       class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold uppercase focus:bg-white focus:border-blue-500 outline-none transition">
+            </div>
 
-                <div>
-                    <select name="purpose_filter" 
-                            id="purpose-select"
-                            hx-get="/counter/queue-rows" 
-                            hx-trigger="change" 
-                            hx-target="#patient-list" 
-                            hx-include="#search-input"
-                            class="w-full py-2.5 px-3 border border-slate-300 rounded-xl text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500 font-bold text-slate-700 outline-none">
-                        <option value="ALL">Semua Aliran Bilik</option>
-                        <option value="SAKIT_BIASA">🤒 Sakit / Demam (OPD)</option>
-                        <option value="TEMUJANJI">📅 Ada Temujanji</option>
-                        <option value="DRESSING">🩹 Cuci Luka / Prosedur</option>
-                        <option value="LAIN_LAIN">💊 Farmasi / Lain-lain</option>
-                    </select>
-                </div>
+            <div class="w-full md:w-64">
+                <select name="purpose_filter" id="purpose-select"
+                        hx-get="/counter/queue-rows" hx-trigger="change"
+                        hx-target="#patient-list" hx-include="#search-input"
+                        class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-blue-500 outline-none transition">
+                    <option value="ALL">Semua Aliran Bilik</option>
+                    <option value="SAKIT_BIASA">Demam / Sakit (OPD)</option>
+                    <option value="TEMUJANJI">Ada Temujanji</option>
+                    <option value="DRESSING">Cuci Luka / Prosedur</option>
+                    <option value="LAIN_LAIN">Farmasi / Ubat</option>
+                </select>
             </div>
         </div>
 
         <!-- Jadual Data Pesakit -->
-        <div class="table-box bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200">
-                    <thead class="bg-slate-50">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-extrabold text-[11px]">
                         <tr>
-                            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Masa</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Kod Rujukan</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Pesakit</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">No. KP / Passport</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">No. Telefon</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Tujuan Kehadiran</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status Alamat</th>
-                            <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Tindakan</th>
+                            <th class="py-3 px-4">Masa</th>
+                            <th class="py-3 px-4">Kod Rujukan</th>
+                            <th class="py-3 px-4">Nama Pesakit</th>
+                            <th class="py-3 px-4">No. KP / Pasport</th>
+                            <th class="py-3 px-4">No. Telefon</th>
+                            <th class="py-3 px-4">Tujuan</th>
+                            <th class="py-3 px-4">Status Alamat</th>
+                            <th class="py-3 px-4 text-right">Tindakan Kaunter</th>
                         </tr>
                     </thead>
-                    <tbody id="patient-list" 
-                           hx-get="/counter/queue-rows" 
-                           hx-trigger="every 4s" 
+                    <tbody id="patient-list"
+                           hx-get="/counter/queue-rows" hx-trigger="every 4s"
                            hx-include="#search-input, #purpose-select"
-                           hx-swap="innerHTML" 
                            class="divide-y divide-slate-100 bg-white">
                         {% include "partials/patient_rows.html" %}
                     </tbody>
@@ -108,87 +104,73 @@
 
     </div>
 
-    <div id="toast-alert">
-        ✓ No. KP disalin ke clipboard! Tekan Ctrl + V di SystmOne.
-    </div>
+    <!-- Toast Notification Terapung -->
+    <div id="toast-alert" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-xl border border-slate-800 hidden flex items-center gap-2 z-50"></div>
 
     <script>
+        // 1. Fungsi Salin Clipboard
+        function quickCopy(text, label) {
+            if (!text || text === 'None') return;
+            let clean = text.trim();
+            if (label === 'No. KP' || label === 'No. Tel') clean = clean.replace(/[^a-zA-Z0-9]/g, '');
 
+            const toast = document.getElementById('toast-alert');
+            const showToast = () => {
+                toast.innerHTML = `<span class="text-emerald-400">✓</span> <span>${label} disalin ke clipboard!</span>`;
+                toast.classList.remove('hidden');
+                setTimeout(() => toast.classList.add('hidden'), 2200);
+            };
 
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(clean).then(showToast).catch(() => fallbackCopy(clean, showToast));
+            } else {
+                fallbackCopy(clean, showToast);
+            }
+        }
+
+        function fallbackCopy(text, cb) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            el.style.position = 'fixed';
+            el.style.left = '-9999px';
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            cb();
+        }
+
+        // 2. Fungsi Suntikan SystmOne (Menghubungkan Local Agent Port 9999)
         async function injectToSystmOne(ic, name, phone, address) {
-    const toast = document.getElementById('toast-alert');
-    
-    // Beri amaran kepada staf supaya klik kotak SystmOne serta-merta
-    if (toast) {
-        toast.innerText = "⏳ KLIK KOTAK SYSTMONE SEKARANG! (Penaipan bermula dalam 2 saat)";
-        toast.style.background = "#d97706"; // Warna amaran jingga
-        toast.style.display = 'block';
-    }
+            const toast = document.getElementById('toast-alert');
+            toast.innerHTML = `<span class="text-amber-400">⏳</span> <span>KLIK KOTAK SYSTMONE SEKARANG! (Mula dalam 2s)</span>`;
+            toast.classList.remove('hidden');
 
-    try {
-        const response = await fetch('http://127.0.0.1:9999/inject', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                ic: ic,
-                name: name,
-                phone: phone,
-                address: address
-            })
+            try {
+                const response = await fetch('http://127.0.0.1:9999/inject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ic: ic, name: name, phone: phone, address: address })
+                });
+
+                if (response.ok) {
+                    toast.innerHTML = `<span class="text-emerald-400">✓</span> <span>Data berjaya ditaip ke SystmOne!</span>`;
+                } else {
+                    toast.innerHTML = `<span class="text-rose-400">⚠️</span> <span>Gagal suntik data ke SystmOne.</span>`;
+                }
+            } catch (err) {
+                toast.innerHTML = `<span class="text-rose-400">⚠️</span> <span>Local helper (systmone_helper.py) tidak aktif di PC ini!</span>`;
+            }
+            setTimeout(() => toast.classList.add('hidden'), 3500);
+        }
+
+        // 3. Auto-fokus Scanner Fizikal ke Kotak Carian
+        document.addEventListener('keydown', function(e) {
+            const input = document.getElementById('search-input');
+            if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+                if (e.key.length === 1 || e.key === 'Enter') input.focus();
+            }
         });
-
-        const res = await response.json();
-        
-        if (toast) {
-            toast.innerText = "✓ Selesai! Data berjaya ditaip ke SystmOne.";
-            toast.style.background = "#15803d"; // Warna hijau berjaya
-            setTimeout(() => { toast.style.display = 'none'; }, 2500);
-        }
-    } catch (err) {
-        console.error("Helper tidak berjalan:", err);
-        if (toast) {
-            toast.innerText = "⚠️ Ralat: Sila pastikan systmone_helper.py sedang berjalan di PC ini!";
-            toast.style.background = "#b91c1c"; // Warna merah
-            setTimeout(() => { toast.style.display = 'none'; }, 4000);
-        }
-    }
-}
-
-
-
-
-
-
-
-
-
-
-        function copyToClipboard(text, label = "Data") {
-    if (!text || text === "None") return;
-
-    let textToCopy = text.trim();
-
-    // Jika No. KP atau No. Telefon, bersihkan simbol khas/sengkang supaya serasi SystmOne
-    if (label === "No. KP" || label === "No. Telefon") {
-        textToCopy = textToCopy.replace(/[^0-9]/g, '');
-    }
-
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        const toast = document.getElementById('toast-alert');
-        if (toast) {
-            toast.innerText = `✓ ${label} disalin ke clipboard! Tekan Ctrl + V di SystmOne.`;
-            toast.style.background = "#0f172a";
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 2200);
-        }
-    }).catch(err => {
-        console.error("Gagal menyalin teks: ", err);
-    });
-}
     </script>
 </body>
 </html>

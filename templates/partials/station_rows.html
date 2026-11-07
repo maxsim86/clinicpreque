@@ -1,0 +1,38 @@
+<!-- templates/partials/station_rows.html -->
+{% for p in patients %}
+<tr id="station-row-{{ p.id }}" class="hover:bg-blue-50/60 transition-colors">
+    <!-- 1. Masa -->
+    <td class="p-3 font-bold text-slate-500 whitespace-nowrap">
+        {{ p.created_at.strftime("%H:%M") if p.created_at else "-" }}
+    </td>
+
+    <!-- 2. Token -->
+    <td class="p-3 whitespace-nowrap">
+        <span class="inline-flex px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+            {{ p.token_code }}
+        </span>
+    </td>
+
+    <!-- 3. Nama Pesakit -->
+    <td class="p-3 font-extrabold text-slate-900 truncate max-w-[140px]" title="{{ p.full_name }}">
+        {{ p.full_name }}
+    </td>
+
+    <!-- 4. Butang Pilih (Memuatkan Kad ke Panel Kiri via HTMX) -->
+    <td class="p-3 text-right whitespace-nowrap">
+        <button type="button"
+                hx-get="/counter/station/patient-card/{{ p.id }}"
+                hx-target="#active-patient-zone"
+                hx-swap="innerHTML"
+                class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-[11px] rounded-lg shadow-sm transition">
+            Pilih ➔
+        </button>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="4" class="p-6 text-center text-slate-400 font-medium text-xs">
+        Tiada pesakit dalam senarai menunggu saringan.
+    </td>
+</tr>
+{% endfor %}

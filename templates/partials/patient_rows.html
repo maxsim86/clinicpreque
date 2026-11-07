@@ -1,113 +1,100 @@
 {% for p in patients %}
-<tr id="patient-row-{{ p.id }}" class="hover:bg-slate-50 transition">
-    <!-- 1. Masa -->
-    <td class="px-5 py-4 text-xs font-bold text-slate-500 whitespace-nowrap">
+<tr id="patient-row-{{ p.id }}" class="hover:bg-slate-50/80 transition-colors">
+    <!-- Masa -->
+    <td class="py-3 px-4 font-bold text-slate-500 whitespace-nowrap">
         {{ p.created_at.strftime("%H:%M") if p.created_at else "-" }}
     </td>
 
-    <!-- 2. Kod Rujukan Token -->
-    <td class="px-5 py-4 whitespace-nowrap">
-        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-black bg-blue-50 text-blue-700 border border-blue-200 tracking-wider">
+    <!-- Kod Rujukan -->
+    <td class="py-3 px-4 whitespace-nowrap">
+        <span class="inline-flex px-2 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-700 border border-blue-200/80 tracking-wider">
             {{ p.token_code }}
         </span>
     </td>
 
-    <!-- 3. Nama Penuh -->
-    <td class="px-5 py-4 text-sm font-extrabold text-slate-900">
+    <!-- Nama Penuh -->
+    <td class="py-3 px-4 font-extrabold text-slate-900 max-w-[200px] truncate" title="{{ p.full_name }}">
         {{ p.full_name }}
     </td>
 
-    <!-- 4. No. KP / Passport (Berserta Butang Salin ke SystmOne) -->
-    <td class="px-5 py-4 text-xs font-semibold text-slate-700 whitespace-nowrap">
-        <span>{{ p.ic_passport }}</span>
-        <button type="button" 
-                onclick="copyToClipboard('{{ p.ic_passport }}')" 
-                class="copy-btn" 
-                title="Salin No. KP untuk SystmOne">
-            📋 Salin
-        </button>
+    <!-- No. KP & Butang Salin -->
+    <td class="py-3 px-4 font-semibold text-slate-700 whitespace-nowrap">
+        <div class="flex items-center gap-1.5">
+            <span>{{ p.ic_passport }}</span>
+            <button onclick="quickCopy('{{ p.ic_passport }}', 'No. KP')" class="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] font-bold" title="Salin No. KP">
+                📋
+            </button>
+        </div>
     </td>
 
-    <!-- 5. No. Telefon (DITAMBAH BUTANG SALIN) -->
-    <td class="px-5 py-4 text-xs font-medium text-slate-600 whitespace-nowrap">
-        <span>{{ p.phone_number }}</span>
-        <button type="button" 
-                onclick="copyToClipboard('{{ p.phone_number }}', 'No. Telefon')" 
-                class="copy-btn" 
-                title="Salin No. Telefon">
-            📋 Salin
-        </button>
+    <!-- No. Telefon & Butang Salin -->
+    <td class="py-3 px-4 font-semibold text-slate-600 whitespace-nowrap">
+        <div class="flex items-center gap-1.5">
+            <span>{{ p.phone_number }}</span>
+            <button onclick="quickCopy('{{ p.phone_number }}', 'No. Tel')" class="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] font-bold" title="Salin Telefon">
+                📋
+            </button>
+        </div>
     </td>
 
-    <!-- 6. Tujuan Kehadiran -->
-    <td class="px-5 py-4 text-xs whitespace-nowrap">
+    <!-- Tujuan Kehadiran (Pill Badge Kemas) -->
+    <td class="py-3 px-4 whitespace-nowrap">
         {% if p.visit_purpose == 'SAKIT_BIASA' %}
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-rose-100 text-rose-800 text-[11px]">
-                🤒 Sakit / Demam
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-rose-50 text-rose-700 border border-rose-200">
+                🤒 Demam/Sakit
             </span>
         {% elif p.visit_purpose == 'TEMUJANJI' %}
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-blue-100 text-blue-800 text-[11px]">
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200">
                 📅 Temujanji
             </span>
         {% elif p.visit_purpose == 'DRESSING' %}
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-800 text-[11px]">
-                🩹 Dressing / Prosedur
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-50 text-amber-700 border border-amber-200">
+                🩹 Prosedur
             </span>
         {% else %}
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-purple-100 text-purple-800 text-[11px]">
-                💊 Farmasi / Lain-lain
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-purple-50 text-purple-700 border border-purple-200">
+                💊 Farmasi
             </span>
         {% endif %}
     </td>
 
-    <!-- 7. Status & Alamat -->
-    <td class="px-5 py-4 text-xs max-w-xs">
+    <!-- Status Alamat (Dibetulkan supaya tidak bercanggah) -->
+    <td class="py-3 px-4 max-w-xs">
         {% if p.address_status == 'DIKEMASKINI' %}
-            <div class="flex items-center justify-between mb-1">
-                <span class="inline-block px-2 py-0.5 font-black text-[10px] bg-amber-100 text-amber-900 rounded">
-                    ⚠️ ALAMAT BAHARU
+            <div class="flex items-center gap-1.5">
+                <span class="inline-block px-1.5 py-0.5 font-black text-[9px] bg-amber-100 text-amber-900 rounded">
+                    ALAMAT BAHARU
                 </span>
-                <button type="button" 
-                        onclick="copyToClipboard('{{ p.address | replace('\'', '\\\'') }}', 'Alamat')" 
-                        class="copy-btn text-[10px]" 
-                        title="Salin Alamat Baharu">
-                    📋 Salin
-                </button>
+                <button onclick="quickCopy('{{ p.address | replace('\'', '\\\'') }}', 'Alamat')" class="p-0.5 rounded bg-slate-100 text-[10px]" title="Salin Alamat">📋</button>
             </div>
-            <div class="text-slate-700 truncate font-semibold" title="{{ p.address }}">{{ p.address }}</div>
+            <div class="text-slate-600 font-medium truncate text-[11px] mt-0.5" title="{{ p.address }}">{{ p.address }}</div>
         {% else %}
-            <span class="inline-block px-2 py-0.5 font-bold text-[10px] bg-emerald-100 text-emerald-800 rounded">
-                ✓ KEKAL REKOD SEDIA ADA
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md">
+                ✓ REKOD KEKAL
             </span>
         {% endif %}
     </td>
 
-
-    <td class="px-5 py-4 text-right whitespace-nowrap space-x-1">
-    <!-- Butang Suntikan Automatik ke SystmOne -->
-    <button type="button" 
-            onclick="injectToSystmOne('{{ p.ic_passport }}', '{{ p.full_name }}', '{{ p.phone_number }}', '{{ p.address }}')"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg shadow-sm transition"
-            title="Suntik data terus ke SystmOne">
-        ⚡ SystmOne
-    </button>
-
-
-
-
-    <!-- 8. Tindakan Selesai -->
-    <td class="px-5 py-4 text-right whitespace-nowrap">
-        <button hx-post="/counter/serve/{{ p.id }}"
-                hx-target="#patient-row-{{ p.id }}"
-                hx-swap="outerHTML"
-                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-sm transition duration-150">
-            Selesai
-        </button>
+    <!-- Butang Tindakan -->
+    <td class="py-3 px-4 text-right whitespace-nowrap">
+        <div class="inline-flex items-center gap-1.5">
+            <button type="button" 
+                    onclick="injectToSystmOne('{{ p.ic_passport }}', '{{ p.full_name }}', '{{ p.phone_number }}', '{{ p.address | replace('\'', '\\\'') }}')"
+                    class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-lg shadow-sm transition flex items-center gap-1">
+                <span>⚡ SystmOne</span>
+            </button>
+            <button hx-post="/counter/serve/{{ p.id }}"
+                    hx-target="#patient-row-{{ p.id }}"
+                    hx-swap="outerHTML"
+                    class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-lg shadow-sm transition">
+                Selesai
+            </button>
+        </div>
     </td>
 </tr>
 {% else %}
 <tr>
-    <td colspan="8" class="text-center py-12 text-slate-400 text-sm font-medium">
+    <td colspan="8" class="text-center py-10 text-slate-400 font-medium text-xs">
         Tiada pesakit dalam senarai pra-pendaftaran menunggu.
     </td>
 </tr>

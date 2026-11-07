@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Request, Depends, Response
+import json
+from typing import List, Optional
+
+from fastapi import APIRouter, Request, Form, Depends, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -10,14 +13,138 @@ from models.queue import PatientQueue
 router = APIRouter(prefix="/counter", tags=["Counter"])
 templates = Jinja2Templates(directory="templates")
 
+
+# ==========================================
+# 1. STESEN PRA-GILIRAN (PRE-QUEUE STATION)
+# ==========================================
+
+@router.get("/station", response_class=HTMLResponse)
+def get_prequeue_station(request: Request, db: Session = Depends(get_db)):
+    """
+    Paparan skrin Stesen Pra-Giliran & Saringan Pantas (/counter/station)
+    """
+    patients = (
+        db.query(PatientQueue)
+        .filter(PatientQueue.is_served == False)
+        .order_by(PatientQueue.created_at.asc())
+        .all()
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="prequeue_station.html",
+        context={"patients": patients}
+    )
+
+
+@router.get("/station/patient-card/{patient_id}", response_class=HTMLResponse)
+def get_patient_card(request: Request, patient_id: int, db: Session = Depends(get_db)):
+    """
+    Memuatkan kad butiran pesakit terpilih ke dalam zon aktif (#active-patient-zone)
+    """
+    patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
+    if not patient:
+        return HTMLResponse("<div class='p-4 text-xs text-rose-500 font-bold'>Pesakit tidak dijumpai.</div>")
+    
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/active_patient_card.html",
+        context={"p": patient}
+    )
+
+
+@router.post("/station/process-ticket", response_class=HTMLResponse)
+def process_station_ticket(
+    request: Request,
+    patient_id: Optional[int] = Form(None),
+    category: str = Form(...),
+    prefix: str = Form(...),
+    is_blood_test: Optional[bool] = Form(False),
+    fasting: Optional[str] = Form(None),
+    test_type: Optional[List[str]] = Form([]),
+    lab_notes: Optional[str] = Form(""),
+    db: Session = Depends(get_db)
+):
+    """
+    Memproses kategori SystmOne, mengemaskini nota makmal, dan mencetuskan cetakan Bixolon
+    """
+    if not patient_id:
+        return HTMLResponse("""
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold animate-fade-in">
+                ⚠️ Sila pilih pesakit daripada senarai terlebih dahulu sebelum memilih kategori tiket!
+            </div>
+        """)
+
+    patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
+    if not patient:
+        return HTMLResponse("""
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold">
+                ⚠️ Rekod pesakit tidak ditemui dalam sistem.
+            </div>
+        """)
+
+    # 1. Format Nombor Giliran mengikut kategori dan token pesakit
+    generated_ticket = f"{prefix}-{patient.token_code}"
+    
+    # 2. Kemas kini data ujian makmal & status giliran
+    patient.systmone_queue_no = generated_ticket
+    patient.is_blood_test = bool(is_blood_test)
+    patient.lab_tests = ", ".join(test_type) if test_type else None
+    patient.fasting_status = fasting if is_blood_test else None
+    patient.lab_notes = lab_notes.strip() if lab_notes else None
+    db.commit()
+
+    # 3. Panggilan Cetak Terma Bixolon SRP-350III (Aktifkan bila sedia)
+    # from services.printer import print_blood_test_ticket
+    # print_blood_test_ticket(
+    #     patient_name=patient.full_name,
+    #     ic_no=patient.ic_passport,
+    #     systmone_queue=generated_ticket,
+    #     tests_list=test_type,
+    #     fasting_status=fasting or "TIADA",
+    #     notes=lab_notes
+    # )
+
+    # 4. Maklum balas UI dan trigger HTMX untuk muat semula senarai giliran
+    response_html = f"""
+    <div class="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 text-xs font-bold flex justify-between items-center shadow-sm animate-fade-in">
+        <div class="flex items-center gap-2">
+            <span class="text-base">✓</span>
+            <span>Tiket <span class="text-blue-700 underline font-black">[{generated_ticket}]</span> ({category}) berjaya diproses!</span>
+        </div>
+        <span class="text-[10px] text-emerald-700 font-semibold bg-emerald-100/70 px-2 py-0.5 rounded-full">Sedia ke Ruang Menunggu</span>
+    </div>
+    """
+    
+    headers = {
+        "HX-Trigger": json.dumps({
+            "refreshQueue": True,
+            "clearActivePatient": True
+        })
+    }
+    return HTMLResponse(content=response_html, headers=headers)
+
+
+# ==========================================
+# 2. KAUNTER PENDAFTARAN UTAMA (/counter)
+# ==========================================
+
 @router.get("", response_class=HTMLResponse)
 def counter_dashboard(request: Request, db: Session = Depends(get_db)):
-    patients = db.query(PatientQueue).filter(PatientQueue.is_served == False).order_by(PatientQueue.created_at.asc()).all()
+    """
+    Papan pemuka kaunter utama staf (/counter)
+    """
+    patients = (
+        db.query(PatientQueue)
+        .filter(PatientQueue.is_served == False)
+        .order_by(PatientQueue.created_at.asc())
+        .all()
+    )
     return templates.TemplateResponse(
         request=request,
         name="staff_dashboard.html",
         context={"patients": patients}
     )
+
 
 @router.get("/queue-rows", response_class=HTMLResponse)
 def get_queue_rows(
@@ -26,6 +153,9 @@ def get_queue_rows(
     purpose_filter: str = "ALL", 
     db: Session = Depends(get_db)
 ):
+    """
+    Serpihan jadual senarai giliran pesakit (HTMX Polling & Search)
+    """
     query = db.query(PatientQueue).filter(PatientQueue.is_served == False)
 
     if purpose_filter and purpose_filter != "ALL":
@@ -49,27 +179,63 @@ def get_queue_rows(
         context={"patients": patients}
     )
 
+
 @router.post("/serve/{patient_id}")
 def mark_served(patient_id: int, db: Session = Depends(get_db)):
+    """
+    Menandakan pesakit telah selesai didaftarkan di kaunter utama
+    """
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if patient:
         patient.is_served = True
         db.commit()
     return Response(content="", status_code=200)
 
+
+@router.get("/copy-field", response_class=HTMLResponse)
+def copy_field(request: Request, text: str, label: str):
+    """
+    Menjana notifikasi toast dan mencetuskan event salin clipboard
+    """
+    clean_text = text.strip()
+    if label in ["No. KP", "No. Tel", "No. Telefon"]:
+        clean_text = "".join(filter(str.isalnum, clean_text))
+
+    headers = {
+        "HX-Trigger": json.dumps({
+            "triggerCopy": clean_text
+        })
+    }
+
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/toast_notification.html",
+        context={"label": label},
+        headers=headers
+    )
+
+
 @router.get("/api/get-patient/{ic_passport}")
 def api_get_patient(ic_passport: str, db: Session = Depends(get_db)):
+    """
+    Endpoint JSON untuk integrasi luaran / skrip SystmOne helper
+    """
     patient = db.query(PatientQueue).filter(
         PatientQueue.ic_passport == ic_passport.strip().upper(),
         PatientQueue.is_served == False
     ).first()
+    
     if not patient:
         return {"found": False}
+        
     return {
         "found": True,
+        "id": patient.id,
         "name": patient.full_name,
         "phone": patient.phone_number,
         "address": patient.address,
+        "address_status": patient.address_status,
         "purpose": patient.visit_purpose,
-        "token": patient.token_code
+        "token": patient.token_code,
+        "systmone_queue": patient.systmone_queue_no
     }

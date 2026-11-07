@@ -12,22 +12,28 @@ from services.postcode import check_pandamaran_zone
 router = APIRouter(tags=["Patient"])
 templates = Jinja2Templates(directory="templates")
 
+# routers/patient.py
+
 @router.get("/register", response_class=HTMLResponse)
-def get_patient_form(request: Request, lang: str = "bm", elderly: bool = False):
+def get_patient_form(request: Request, lang: str = "bm", elderly: str = "false"):
+    # Tukar string kepada boolean sebenar
+    is_elderly = elderly.lower() in ["true", "1", "yes"]
     texts = TRANSLATIONS.get(lang, TRANSLATIONS["bm"])
     return templates.TemplateResponse(
         request=request,
         name="patient_form.html",
-        context={"t": texts, "lang": lang, "elderly": elderly}
+        context={"t": texts, "lang": lang, "elderly": is_elderly}
     )
 
 @router.get("/get-form-content", response_class=HTMLResponse)
-def get_form_content(request: Request, lang: str = "bm", elderly: bool = False):
+def get_form_content(request: Request, lang: str = "bm", elderly: str = "false"):
+    # Tukar string kepada boolean sebenar
+    is_elderly = elderly.lower() in ["true", "1", "yes"]
     texts = TRANSLATIONS.get(lang, TRANSLATIONS["bm"])
     return templates.TemplateResponse(
         request=request,
         name="partials/form_content.html",
-        context={"t": texts, "lang": lang, "elderly": elderly}
+        context={"t": texts, "lang": lang, "elderly": is_elderly}
     )
 
 @router.get("/api/lookup-postcode/{postcode}")

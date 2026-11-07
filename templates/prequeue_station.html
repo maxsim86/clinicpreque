@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stesen Pra-Giliran & Saringan - KK Pandamaran</title>
+    <!-- Tailwind CSS & HTMX -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ url_for('static', path='js/htmx.min.js') }}"></script>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        /* Kunci saiz SVG agar tidak membesar */
+        svg { width: 16px !important; height: 16px !important; display: inline-block; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 text-slate-800">
+
+    <!-- Header Atas: Status Perkakasan & Rangkaian -->
+    <header class="bg-white border border-slate-200/90 rounded-2xl px-6 py-3.5 shadow-sm mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div class="flex items-center gap-3">
+            <span class="bg-blue-600 text-white text-xs font-black px-2.5 py-1 rounded-lg tracking-wider shadow-sm shadow-blue-500/20">KK PANDAMARAN</span>
+            <div>
+                <h1 class="text-base font-black text-slate-900 tracking-tight">Stesen Pra-Giliran & Saringan Pantas</h1>
+                <p class="text-[11px] text-slate-400 font-bold">Pintu Masuk & Unit Saringan Awal</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 text-xs font-bold">
+            <div class="flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200/70 px-3 py-1.5 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Bixolon SRP-350III Sedia</span>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span>SystmOne Sync</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Grid Susunan 2 Kolum -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        <!-- ================= BAHAGIAN KIRI (7 Kolum): KAD PESAKIT & FORM SARINGAN ================= -->
+        <div class="lg:col-span-7 space-y-4">
+
+            <!-- Bekas Dinamik HTMX: Menukar paparan kad apabila pesakit dipilih / diimbas -->
+            <div id="active-patient-zone">
+                <div class="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-8 text-center text-slate-400 shadow-sm">
+                    <span class="text-4xl block mb-2">📷</span>
+                    <p class="font-extrabold text-sm text-slate-700">Sedia Menerima Imbasan Kod Bar / QR Pesakit</p>
+                    <p class="text-xs text-slate-400 mt-1">Imbas kod QR pada telefon pesakit atau klik pada senarai menunggu di sebelah kanan.</p>
+                </div>
+            </div>
+
+            <!-- Borang Pemilihan Aliran & Ambil Darah (Dikawal HTMX) -->
+            <form id="triage-form"
+                  hx-post="/counter/station/process-ticket"
+                  hx-target="#feedback-zone"
+                  hx-swap="innerHTML"
+                  class="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm space-y-4">
+                
+                <!-- Input Tersembunyi: Kategori dan Prefix Tiket -->
+                <input type="hidden" name="category" id="selected-category" value="OPD">
+                <input type="hidden" name="prefix" id="selected-prefix" value="D">
+
+                <!-- Panel Ambil Darah (Phlebotomy / Makmal) -->
+                <div class="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <label class="flex items-center gap-2.5 cursor-pointer">
+                            <input type="checkbox" 
+                                   id="check-blood-test" 
+                                   name="is_blood_test"
+                                   value="true"
+                                   onchange="toggleBloodPanel(this.checked)" 
+                                   class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-0">
+                            <span class="text-xs font-black text-blue-950 uppercase tracking-wide">💉 Pesakit Ambil Darah (Phlebotomy)</span>
+                        </label>
+                        <span class="text-[10px] font-black bg-blue-200/80 text-blue-800 px-2 py-0.5 rounded-md">Bilik Makmal</span>
+                    </div>
+
+                    <!-- Pilihan Ujian Darah -->
+                    <div id="blood-test-options" class="hidden space-y-2.5 pt-2 border-t border-blue-200/60">
+                        <!-- Status Puasa -->
+                        <div class="flex gap-2">
+                            <label class="flex-1 text-center py-2 border-2 border-slate-200 rounded-xl bg-white text-xs font-bold text-slate-700 cursor-pointer has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-900 transition">
+                                <input type="radio" name="fasting" value="PUASA" class="hidden" checked> 🍽️ Berpuasa
+                            </label>
+                            <label class="flex-1 text-center py-2 border-2 border-slate-200 rounded-xl bg-white text-xs font-bold text-slate-700 cursor-pointer has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:text-amber-900 transition">
+                                <input type="radio" name="fasting" value="TIDAK_PUASA" class="hidden"> ☕ Tidak Puasa / Rawak
+                            </label>
+                        </div>
+
+                        <!-- Senarai Ujian Darah -->
+                        <div class="grid grid-cols-3 gap-2 text-xs font-bold text-slate-700">
+                            <label class="bg-white border-2 border-slate-200 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:text-blue-900 transition">
+                                <input type="checkbox" name="test_type" value="FBS" class="rounded text-blue-600 focus:ring-0"> FBS (Gula)
+                            </label>
+                            <label class="bg-white border-2 border-slate-200 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:text-blue-900 transition">
+                                <input type="checkbox" name="test_type" value="HBA1C" class="rounded text-blue-600 focus:ring-0"> HbA1c
+                            </label>
+                            <label class="bg-white border-2 border-slate-200 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:text-blue-900 transition">
+                                <input type="checkbox" name="test_type" value="LIPID" class="rounded text-blue-600 focus:ring-0"> Kolestrol
+                            </label>
+                            <label class="bg-white border-2 border-slate-200 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:text-blue-900 transition">
+                                <input type="checkbox" name="test_type" value="RP" class="rounded text-blue-600 focus:ring-0"> Buah Pinggang
+                            </label>
+                            <label class="bg-white border-2 border-slate-200 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:text-blue-900 transition">
+                                <input type="checkbox" name="test_type" value="LFT" class="rounded text-blue-600 focus:ring-0"> Profil Hati
+                            </label>
+                            <label class="bg-white border-2 border-slate-200 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:text-blue-900 transition">
+                                <input type="checkbox" name="test_type" value="FBC" class="rounded text-blue-600 focus:ring-0"> Full Blood (FBC)
+                            </label>
+                        </div>
+
+                        <!-- Nota Ringkas -->
+                        <input type="text" name="lab_notes" placeholder="Catatan tambahan makmal (cth: Temujanji NCD, Ibu Hamil)..." 
+                               class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold uppercase outline-none focus:border-blue-500 transition">
+                    </div>
+                </div>
+
+                <!-- Butang Kategori Aliran (1-Click Submit & Print) -->
+                <div>
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2.5">Pilih Kategori untuk Cetak Tiket Bixolon:</h3>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- 1. OPD Demam -->
+                        <button type="submit" 
+                                onclick="setCategoryAndPrefix('OPD', 'D')"
+                                class="flex flex-col items-start p-4 rounded-2xl border-2 border-rose-200 bg-rose-50/50 hover:bg-rose-100/70 active:scale-[0.98] transition text-left group">
+                            <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">🤒</span>
+                            <span class="font-black text-sm text-rose-950">OPD - Demam / Sakit</span>
+                            <span class="text-[10px] font-black text-rose-600 bg-white px-2 py-0.5 rounded-md border border-rose-200 mt-2">Prefix: [ D ]</span>
+                        </button>
+
+                        <!-- 2. OPD Prosedur -->
+                        <button type="submit" 
+                                onclick="setCategoryAndPrefix('OPD', 'P')"
+                                class="flex flex-col items-start p-4 rounded-2xl border-2 border-amber-200 bg-amber-50/50 hover:bg-amber-100/70 active:scale-[0.98] transition text-left group">
+                            <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">🩹</span>
+                            <span class="font-black text-sm text-amber-950">OPD - Dressing / Prosedur</span>
+                            <span class="text-[10px] font-black text-amber-600 bg-white px-2 py-0.5 rounded-md border border-amber-200 mt-2">Prefix: [ P ]</span>
+                        </button>
+
+                        <!-- 3. MCH Ibu & Anak -->
+                        <button type="submit" 
+                                onclick="setCategoryAndPrefix('MCH', 'M')"
+                                class="flex flex-col items-start p-4 rounded-2xl border-2 border-pink-200 bg-pink-50/50 hover:bg-pink-100/70 active:scale-[0.98] transition text-left group">
+                            <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">👶</span>
+                            <span class="font-black text-sm text-pink-950">MCH - Ibu Hamil / Anak</span>
+                            <span class="text-[10px] font-black text-pink-600 bg-white px-2 py-0.5 rounded-md border border-pink-200 mt-2">Prefix: [ M ]</span>
+                        </button>
+
+                        <!-- 4. Farmasi / Rawatan Lain -->
+                        <button type="submit" 
+                                onclick="setCategoryAndPrefix('OPD', 'U')"
+                                class="flex flex-col items-start p-4 rounded-2xl border-2 border-purple-200 bg-purple-50/50 hover:bg-purple-100/70 active:scale-[0.98] transition text-left group">
+                            <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">💊</span>
+                            <span class="font-black text-sm text-purple-950">Farmasi / Ambil Ubat</span>
+                            <span class="text-[10px] font-black text-purple-600 bg-white px-2 py-0.5 rounded-md border border-purple-200 mt-2">Prefix: [ U ]</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Zon Notifikasi Maklum Balas -->
+            <div id="feedback-zone"></div>
+        </div>
+
+        <!-- ================= BAHAGIAN KANAN (5 Kolum): SENARAI MENUNGGU 4 LAJUR ================= -->
+        <div class="lg:col-span-5 bg-white border border-slate-200/90 rounded-3xl p-4 shadow-sm flex flex-col h-[calc(100vh-120px)]">
+            
+            <div class="flex justify-between items-center mb-3 px-1">
+                <h2 class="text-sm font-black text-slate-800 tracking-tight">Senarai Pra-Daftar Menunggu</h2>
+                <span class="text-[11px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">Live HTMX (3s)</span>
+            </div>
+
+            <!-- Input Carian / Pengimbas Kod Bar -->
+            <div class="relative mb-3">
+                <input type="text" 
+                       id="search-input" 
+                       name="search" 
+                       placeholder="Imbas Kod Bar / Taip Carian..."
+                       hx-get="/counter/station/queue-rows"
+                       hx-trigger="keyup changed delay:250ms, search"
+                       hx-target="#queue-table-body"
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-bold uppercase outline-none focus:bg-white focus:border-blue-500 transition">
+                <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+            </div>
+
+            <!-- Jadual 4 Lajur Kemas -->
+            <div class="overflow-y-auto flex-1 border border-slate-100 rounded-2xl">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-slate-50 sticky top-0 border-b border-slate-200/80 text-slate-400 uppercase font-black text-[10px] tracking-wider">
+                        <tr>
+                            <th class="p-3">Masa</th>
+                            <th class="p-3">Token</th>
+                            <th class="p-3">Nama Pesakit</th>
+                            <th class="p-3 text-right">Pilih</th>
+                        </tr>
+                    </thead>
+
+                    <!-- Menggunakan serpihan 4 lajur: station_rows.html -->
+                    <tbody id="queue-table-body" 
+                           hx-get="/counter/station/queue-rows" 
+                           hx-trigger="every 3s, refreshQueue from:body" 
+                           hx-include="#search-input"
+                           class="divide-y divide-slate-100">
+                        {% include "partials/station_rows.html" %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Logik Pengendali JS Ringkas -->
+    <script>
+        function toggleBloodPanel(show) {
+            const panel = document.getElementById('blood-test-options');
+            if (show) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        function setCategoryAndPrefix(category, prefix) {
+            document.getElementById('selected-category').value = category;
+            document.getElementById('selected-prefix').value = prefix;
+        }
+
+        // Tangkap acara untuk membersihkan kad pesakit aktif selepas tiket diproses
+        document.body.addEventListener('clearActivePatient', function() {
+            const activeZone = document.getElementById('active-patient-zone');
+            if (activeZone) {
+                activeZone.innerHTML = `
+                    <div class="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-8 text-center text-slate-400 shadow-sm animate-fade-in">
+                        <span class="text-4xl block mb-2">📷</span>
+                        <p class="font-extrabold text-sm text-slate-700">Sedia Menerima Imbasan Kod Bar / QR Pesakit</p>
+                        <p class="text-xs text-slate-400 mt-1">Imbas kod QR pada telefon pesakit atau klik pada senarai menunggu di sebelah kanan.</p>
+                    </div>
+                `;
+            }
+            // Reset checkbox ujian darah
+            const bloodCheckbox = document.getElementById('check-blood-test');
+            if (bloodCheckbox) {
+                bloodCheckbox.checked = false;
+                toggleBloodPanel(false);
+            }
+        });
+
+        // Pengimbas fizikal barcode sentiasa fokus ke kotak carian
+        document.addEventListener('keydown', function(e) {
+            const searchInput = document.getElementById('search-input');
+            if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                if (e.key.length === 1 || e.key === 'Enter') {
+                    searchInput.focus();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

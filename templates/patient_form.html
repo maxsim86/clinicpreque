@@ -4,80 +4,94 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pendaftaran Pra-Giliran KK Pandamaran</title>
-    <!-- HTMX Script -->
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    
+    <!-- Script Tailwind & HTMX -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ url_for('static', path='js/htmx.min.js') }}"></script>
+
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: #f1f5f9; margin: 0; padding: 16px 10px; display: flex; justify-content: center; }
-        
-        .card { background: #ffffff; width: 100%; max-width: 480px; border-radius: 16px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); transition: all 0.2s ease; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .badge-kk { display: inline-block; background-color: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 9999px; margin-bottom: 8px; text-transform: uppercase; }
-        .header h2 { margin: 0 0 6px 0; color: #1e3a8a; font-size: 22px; font-weight: 800; }
-        .header p { margin: 0; color: #64748b; font-size: 13px; }
-        
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 5px; }
-        .input-control { width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; text-transform: uppercase; outline: none; }
-        .input-control:focus { border-color: #2563eb; }
-        .input-readonly { background-color: #f8fafc; color: #475569; }
-
-        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; }
-        .btn-lang { padding: 5px 12px; border-radius: 6px; font-weight: bold; border: 1.5px solid #cbd5e1; background: #fff; cursor: pointer; font-size: 12px; }
-        .btn-lang.active-lang { background: #2563eb; color: #ffffff; border-color: #2563eb; }
-        .btn-elderly { border: 1.5px solid #cbd5e1; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; }
-
-        .purpose-btn {
-            background: #ffffff;
-            border: 2px solid #cbd5e1;
-            border-radius: 12px;
-            padding: 14px 10px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.15s ease-in-out;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            outline: none;
+        * { 
+            box-sizing: border-box; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
         }
-        .purpose-btn:hover { border-color: #93c5fd; background-color: #f8fafc; }
-        .purpose-btn.active { border-color: #2563eb !important; background-color: #eff6ff !important; box-shadow: 0 0 0 2px #bfdbfe; }
-        .purpose-btn .btn-icon { font-size: 26px; margin-bottom: 4px; }
-        .purpose-btn .btn-title { font-size: 13px; font-weight: 800; color: #1e293b; line-height: 1.2; }
-        .purpose-btn.active .btn-title { color: #1d4ed8; }
-        .purpose-btn .btn-subtitle { font-size: 10px; color: #64748b; margin-top: 3px; line-height: 1.2; }
-
-        .status-box { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 10px; }
-        .status-title { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 10px; display: block; }
-        .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-        .radio-card { border: 2px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 10px; cursor: pointer; transition: 0.2s; display: block; }
-        .radio-card.active { border-color: #2563eb; background-color: #eff6ff; }
-        .radio-card input { margin-right: 6px; }
-        .radio-card .title { font-size: 13px; font-weight: 700; color: #1e293b; }
-        .radio-card .desc { font-size: 11px; color: #64748b; margin-top: 4px; line-height: 1.3; }
-
-        .note-green { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 12px; padding: 10px; border-radius: 6px; font-weight: 500; }
-        .info-pandamaran { font-size: 11px; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 8px 10px; border-radius: 6px; margin-bottom: 10px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
         
-        .btn-submit { width: 100%; background: #2563eb; color: #ffffff; border: none; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 15px; }
-        .btn-submit:hover { background: #1d4ed8; }
+        body { 
+            background-color: #f1f5f9; 
+            margin: 0; 
+            padding: 16px 10px; 
+            display: flex; 
+            justify-content: center; 
+        }
 
-        .elderly-mode { max-width: 580px !important; padding: 30px !important; border: 3px solid #1e3a8a !important; }
-        .elderly-mode .header h2 { font-size: 28px !important; }
-        .elderly-mode .header p { font-size: 16px !important; font-weight: 600 !important; color: #334155 !important; }
-        .elderly-mode .form-group label { font-size: 18px !important; font-weight: 800 !important; color: #0f172a !important; margin-bottom: 8px !important; }
-        .elderly-mode .input-control { font-size: 20px !important; padding: 14px 16px !important; border: 2.5px solid #475569 !important; border-radius: 10px !important; }
-        .elderly-mode .status-title { font-size: 18px !important; }
-        .elderly-mode .radio-card .title { font-size: 16px !important; font-weight: 800 !important; }
-        .elderly-mode .radio-card .desc { font-size: 13px !important; }
-        .elderly-mode .btn-submit { font-size: 20px !important; padding: 18px !important; }
-        .elderly-mode .purpose-btn { padding: 18px 12px !important; border-width: 3px !important; }
-        .elderly-mode .purpose-btn .btn-icon { font-size: 34px !important; }
-        .elderly-mode .purpose-btn .btn-title { font-size: 16px !important; }
-        .elderly-mode .purpose-btn .btn-subtitle { font-size: 12px !important; }
+        /* SVG Default Size Lock (Mencegah ikon membesar jika sambungan luar talian) */
+        svg {
+            width: 16px !important;
+            height: 16px !important;
+            max-width: 16px !important;
+            max-height: 16px !important;
+            display: inline-block;
+        }
+
+        /* Mod Warga Emas (Senior Citizen Mode) */
+        .elderly-mode {
+            max-width: 620px !important;
+            padding: 32px 28px !important;
+            border: 3px solid #1e40af !important;
+        }
+
+        .elderly-mode h2 {
+            font-size: 28px !important;
+        }
+
+        .elderly-mode p {
+            font-size: 15px !important;
+        }
+
+        .elderly-mode label {
+            font-size: 16px !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+        }
+
+        /* Ruang khas 48px sebelah kiri bagi mengelakkan pertindihan ikon & teks */
+        .elderly-mode input, 
+        .elderly-mode textarea {
+            font-size: 18px !important;
+            padding-top: 14px !important;
+            padding-bottom: 14px !important;
+            padding-right: 16px !important;
+            padding-left: 48px !important;
+            border-width: 2.5px !important;
+        }
+
+        .elderly-mode .relative > div:first-child {
+            left: 14px !important;
+        }
+
+        .elderly-mode svg {
+            width: 20px !important;
+            height: 20px !important;
+            max-width: 20px !important;
+            max-height: 20px !important;
+        }
+
+        .elderly-mode .purpose-btn {
+            padding: 16px 12px !important;
+            border-width: 3px !important;
+        }
+
+        .elderly-mode .purpose-btn span:nth-child(2) {
+            font-size: 15px !important;
+        }
+
+        .elderly-mode .purpose-btn span:nth-child(3) {
+            font-size: 12px !important;
+        }
+
+        .elderly-mode button[type="submit"] {
+            font-size: 19px !important;
+            padding: 18px !important;
+        }
     </style>
 </head>
 <body>
@@ -87,33 +101,18 @@
     </div>
 
     <script>
+        // Jalankan semakan bila halaman dibuka & selepas HTMX swap
         document.addEventListener("DOMContentLoaded", initAddressField);
         document.body.addEventListener('htmx:afterSwap', initAddressField);
 
         function initAddressField() {
-            const fullAddressInput = document.getElementById('full_address_input');
             const radioKekal = document.querySelector('input[name="address_status"][value="KEKAL"]');
-            if (fullAddressInput && radioKekal && radioKekal.checked) {
-                fullAddressInput.value = "KEKAL SEPERTI REKOD SEDIA ADA";
-                fullAddressInput.required = false;
-            }
-        }
-
-        function setPurpose(value, index) {
-            const hiddenInput = document.getElementById('selected_visit_purpose');
-            if (hiddenInput) {
-                hiddenInput.value = value;
-            }
-
-            for (let i = 1; i <= 4; i++) {
-                const btn = document.getElementById(`btn-purpose-${i}`);
-                if (btn) {
-                    if (i === index) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                }
+            const radioChange = document.querySelector('input[name="address_status"][value="DIKEMASKINI"]');
+            
+            if (radioKekal && radioKekal.checked) {
+                toggleAddressInput('KEKAL');
+            } else if (radioChange && radioChange.checked) {
+                toggleAddressInput('DIKEMASKINI');
             }
         }
 
@@ -127,24 +126,58 @@
             if (status === 'DIKEMASKINI') {
                 if (newAddressBox) newAddressBox.style.display = 'block';
                 if (sameNote) sameNote.style.display = 'none';
+                
                 if (fullAddressInput) {
                     fullAddressInput.required = true;
-                    fullAddressInput.value = "";
+                    if (fullAddressInput.value === "KEKAL SEPERTI REKOD SEDIA ADA") {
+                        fullAddressInput.value = "";
+                    }
                 }
-                if (cardChange) cardChange.classList.add('active');
-                if (cardSame) cardSame.classList.remove('active');
+                
+                if (cardChange) {
+                    cardChange.className = "flex flex-col p-3 rounded-2xl border-2 border-blue-600 bg-blue-50/60 cursor-pointer transition";
+                }
+                if (cardSame) {
+                    cardSame.className = "flex flex-col p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 cursor-pointer transition";
+                }
             } else {
                 if (newAddressBox) newAddressBox.style.display = 'none';
-                if (sameNote) sameNote.style.display = 'block';
+                if (sameNote) sameNote.style.display = 'flex';
+                
                 if (fullAddressInput) {
                     fullAddressInput.required = false;
                     fullAddressInput.value = "KEKAL SEPERTI REKOD SEDIA ADA";
                 }
-                if (cardSame) cardSame.classList.add('active');
-                if (cardChange) cardChange.classList.remove('active');
+                
+                if (cardSame) {
+                    cardSame.className = "flex flex-col p-3 rounded-2xl border-2 border-blue-600 bg-blue-50/60 cursor-pointer transition";
+                }
+                if (cardChange) {
+                    cardChange.className = "flex flex-col p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 cursor-pointer transition";
+                }
             }
         }
 
+        // Pengendali pemilihan butang tujuan kehadiran 2x2
+        function setPurpose(value, index) {
+            const hiddenInput = document.getElementById('selected_visit_purpose');
+            if (hiddenInput) {
+                hiddenInput.value = value;
+            }
+
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById(`btn-purpose-${i}`);
+                if (btn) {
+                    if (i === index) {
+                        btn.className = "purpose-btn active p-3 rounded-2xl border-2 border-blue-600 bg-blue-50/60 text-left transition-all relative overflow-hidden group";
+                    } else {
+                        btn.className = "purpose-btn p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 text-left transition-all relative overflow-hidden group";
+                    }
+                }
+            }
+        }
+
+        // Format No. KP secara automatik (cth: 900101-10-5555)
         function formatIC(input) {
             let val = input.value.toUpperCase().replace(/\D/g, '');
             if (val.length > 6 && val.length <= 8) {
@@ -156,6 +189,7 @@
             }
         }
 
+        // Semakan zon poskod KK Pandamaran
         async function lookupPostcode(postcode) {
             const feedback = document.getElementById('postcode_feedback');
             const cityDisplay = document.getElementById('city_display');
