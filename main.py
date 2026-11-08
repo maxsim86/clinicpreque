@@ -1,24 +1,30 @@
+# main.py
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from core.database import engine, Base
-from routers import patient, counter
+from brotli_asgi import BrotliMiddleware
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.responses import Response
 
-# Cipta jadual pangkalan data
-Base.metadata.create_all(bind=engine)
+from routers import counter, patient
 
-app = FastAPI(
-    title="Sistem Pra-Giliran KK Pandamaran",
-    description="Sistem pendaftaran pantas bersepadu kaunter & triage",
-    version="2.0.0"
-)
+app = FastAPI(title="KK Pandamaran Pre-Queue")
 
-# --- DAFTAR FOLDER STATIK DI SINI ---
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# 1. Aktifkan Pemampatan Brotli & GZip (Pilih format terbaik mengikut sokongan pelayar)
+# Brotli sangat berkesan memampatkan teks HTML/CSS/JS (sehingga 80% pengurangan saiz)
+app.add_middleware(BrotliMiddleware, quality=5, minimum_size=500)
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
-# Daftarkan Router Modul
-app.include_router(patient.router)
+
+# 2. Custom StaticFiles untuk dayakan HTTP Cache-Control (Cache selama 30 hari / 1 tahun)
+class CachedStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        # 2592000 saat = 30 hari
+        response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+        return response
+
+app.mount("/static", CachedStaticFiles(directory="static"), name="static")
+
+# Masukkan router
 app.include_router(counter.router)
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+app.include_router(patient.router)

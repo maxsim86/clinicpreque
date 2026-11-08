@@ -1,97 +1,96 @@
-import json, re
+import json
+import re
+import asyncio
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import List, Optional
 
 from fastapi import APIRouter, Request, Form, Depends, Response, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from sse_starlette.sse import EventSourceResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from core.database import get_db
 from models.queue import PatientQueue
 from services.systmone_bot import trigger_systmone_ticket
+from services.sse_manager import sse_manager
 
 router = APIRouter(prefix="/counter", tags=["Counter"])
 templates = Jinja2Templates(directory="templates")
 
 
-# ==========================================
-# FUNGSI 1: BATAL / GUGUR PESAKIT DARI SENARAI
-# ==========================================
-
-@router.post("/cancel-patient/{patient_id}")
-def cancel_patient_queue(patient_id: int, db: Session = Depends(get_db)):
-    """Menandakan pesakit sebagai terbatal/selesai supaya baris hilang dari senarai menunggu"""
-    patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
-    if patient:
-        patient.is_served = True  # Keluarkan dari paparan senarai menunggu
-        patient.systmone_queue_no = "DIBATALKAN"
-        db.commit()
-
-    # Hantar maklum balas kosong bersama header untuk segarkan senarai & bersihkan kad jika pesakit aktif dibatalkan
-    headers = {
-        "HX-Trigger": json.dumps({
-            "refreshQueue": True,
-            "clearActivePatient": True
-        })
-    }
-    return Response(content="", status_code=200, headers=headers)
-
-
-# ==========================================
-# FUNGSI 2: CETAK SEMULA TIKET TERAKHIR (REPRINT)
-# ==========================================
-
-@router.post("/reprint-last", response_class=HTMLResponse)
-def reprint_last_ticket(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Mencari pesakit terakhir yang telah diproses dan cetak semula tiket / cetuskan SystmOne"""
-    # Cari rekod terakhir yang telah diproses dan mempunyai no tiket
+def get_next_token(db: Session) -> str:
+    """Menjana nombor token harian ringkas (cth: A0001)"""
+    kl_tz = ZoneInfo("Asia/Kuala_Lumpur")
+    today_start = datetime.now(kl_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    
     last_patient = (
         db.query(PatientQueue)
-        .filter(
-            PatientQueue.is_served == True,
-            PatientQueue.systmone_queue_no.isnot(None),
-            PatientQueue.systmone_queue_no != "DIBATALKAN"
-        )
+        .filter(PatientQueue.created_at >= today_start)
         .order_by(PatientQueue.id.desc())
         .first()
     )
-
-    if not last_patient:
-        return HTMLResponse("""
-            <div class="fixed bottom-5 right-5 bg-rose-600 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-xl animate-fade-in z-50 flex items-center gap-2">
-                <span>⚠️ Tiada rekod tiket sedia ada untuk dicetak semula.</span>
-            </div>
-        """)
-
-    # Cetus bot SystmOne atau hantar ke Bixolon di latar belakang
-    # Kategori default boleh ditentukan dari no tiket (cth: prefix D -> OPD)
-    cat = "OPD"
-    if "M" in (last_patient.systmone_queue_no or ""):
-        cat = "MCH"
-    elif "S" in (last_patient.systmone_queue_no or ""):
-        cat = "PAKAR"
-
-    background_tasks.add_task(trigger_systmone_ticket, cat)
-
-    # Contoh jika ada fungsi printer fizikal:
-    # background_tasks.add_task(reprint_ticket_bixolon, last_patient)
-
-    return HTMLResponse(f"""
-        <div id="reprint-toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl animate-fade-in z-50 flex items-center gap-2 border border-slate-700">
-            <span class="text-emerald-400 text-sm">🖨️</span>
-            <span>Tiket terakhir <span class="text-blue-400 font-black">[{last_patient.systmone_queue_no}]</span> ({last_patient.full_name}) dihantar semula ke pencetak!</span>
-        </div>
-        <script>
-            setTimeout(() => {{
-                const toast = document.getElementById('reprint-toast');
-                if (toast) toast.remove();
-            }}, 3500);
-        </script>
-    """)
+    
+    next_num = 1
+    if last_patient and last_patient.token_code:
+        digits = re.sub(r'[^0-9]', '', last_patient.token_code)
+        if digits:
+            next_num = int(digits) + 1
+            
+    return f"A{next_num:04d}"
 
 
+# ==========================================
+# 0. PENDAFTARAN WALK-IN & EDIT TOKEN
+# ==========================================
 
+@router.post("/station/quick-walkin", response_class=HTMLResponse)
+async def quick_walkin_register(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    full_name: str = Form(...),
+    ic_passport: str = Form(...),
+    phone_number: Optional[str] = Form("-"),
+    address: Optional[str] = Form("-"),
+    db: Session = Depends(get_db)
+):
+    clean_ic = ic_passport.strip().upper().replace("-", "")
+    token = get_next_token(db)
+
+    new_patient = PatientQueue(
+        full_name=full_name.strip().upper(),
+        ic_passport=clean_ic,
+        phone_number=phone_number.strip() if phone_number else "-",
+        address=address.strip() if address else "-",
+        address_status="KEKAL",
+        token_code=token,
+        visit_purpose="OPD",
+        is_served=False
+    )
+    db.add(new_patient)
+    db.commit()
+    db.refresh(new_patient)
+
+    # Siarkan ke stesen lain melalui SSE
+    background_tasks.add_task(sse_manager.broadcast_refresh)
+
+    card_html = templates.TemplateResponse(
+        request=request,
+        name="partials/active_patient_card.html",
+        context={"p": new_patient, "patient": new_patient}
+    ).body.decode("utf-8")
+
+    # PASTIKAN ada "refreshQueue": True supaya stesen ini terus kemas kini senarai
+    headers = {
+        "HX-Trigger": json.dumps({
+            "refreshQueue": True,
+            "playAudioSuccess": True,
+            "closeWalkInModal": True
+        })
+    }
+    return HTMLResponse(content=card_html, headers=headers)
 
 @router.get("/edit-token/{patient_id}", response_class=HTMLResponse)
 def get_edit_token_form(request: Request, patient_id: int, db: Session = Depends(get_db)):
@@ -107,15 +106,21 @@ def get_edit_token_form(request: Request, patient_id: int, db: Session = Depends
 
 
 @router.post("/update-token/{patient_id}", response_class=HTMLResponse)
-def update_patient_token(request: Request, patient_id: int, new_token: str = Form(...), db: Session = Depends(get_db)):
+async def update_patient_token(
+    request: Request, 
+    background_tasks: BackgroundTasks,
+    patient_id: int, 
+    new_token: str = Form(...), 
+    db: Session = Depends(get_db)
+):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if patient:
         clean_token = new_token.strip().upper()
         patient.token_code = clean_token
         patient.systmone_queue_no = clean_token
         db.commit()
+        background_tasks.add_task(sse_manager.broadcast_refresh)
 
-    # Pulangkan lencana badge terus menggantikan <form> (hx-target="this")
     return templates.TemplateResponse(
         request=request,
         name="partials/token_badge.html",
@@ -137,28 +142,87 @@ def cancel_edit_token(request: Request, patient_id: int, db: Session = Depends(g
 
 
 # ==========================================
-# 1. STESEN PRA-GILIRAN (PRE-QUEUE STATION)
+# 1. PENGURUSAN PESAKIT & CETAK SEMULA
+# ==========================================
+
+@router.post("/cancel-patient/{patient_id}")
+async def cancel_patient_queue(patient_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
+    if patient:
+        patient.is_served = True
+        patient.systmone_queue_no = "DIBATALKAN"
+        db.commit()
+        background_tasks.add_task(sse_manager.broadcast_refresh)
+
+    headers = {"HX-Trigger": json.dumps({"clearActivePatient": True})}
+    return Response(content="", status_code=200, headers=headers)
+
+
+@router.post("/reprint-last", response_class=HTMLResponse)
+def reprint_last_ticket(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Cetak semula tiket bagi pesakit terakhir yang diproses"""
+    last_patient = (
+        db.query(PatientQueue)
+        .filter(
+            PatientQueue.is_served == True,
+            PatientQueue.systmone_queue_no.isnot(None),
+            PatientQueue.systmone_queue_no != "DIBATALKAN"
+        )
+        .order_by(PatientQueue.id.desc())
+        .first()
+    )
+
+    if not last_patient:
+        return HTMLResponse("""
+            <div id="reprint-toast" class="fixed bottom-5 right-5 bg-rose-600 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-xl animate-fade-in z-50 flex items-center gap-2">
+                <span>⚠️ Tiada rekod tiket sedia ada untuk dicetak semula.</span>
+            </div>
+            <script>setTimeout(() => { const t = document.getElementById('reprint-toast'); if(t) t.remove(); }, 3500);</script>
+        """)
+
+    cat = "OPD"
+    if "M" in (last_patient.systmone_queue_no or ""):
+        cat = "MCH"
+    elif "S" in (last_patient.systmone_queue_no or ""):
+        cat = "PAKAR"
+
+    background_tasks.add_task(trigger_systmone_ticket, cat)
+
+    return HTMLResponse(f"""
+        <div id="reprint-toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl animate-fade-in z-50 flex items-center gap-2 border border-slate-700">
+            <span class="text-emerald-400 text-sm">🖨️</span>
+            <span>Tiket terakhir <span class="text-blue-400 font-black">[{last_patient.systmone_queue_no}]</span> ({last_patient.full_name}) dihantar semula ke pencetak!</span>
+        </div>
+        <script>setTimeout(() => {{ const t = document.getElementById('reprint-toast'); if(t) t.remove(); }}, 3500);</script>
+    """)
+
+
+# ==========================================
+# 2. STESEN PRA-GILIRAN (PRE-QUEUE STATION)
 # ==========================================
 
 @router.get("/station", response_class=HTMLResponse)
 def get_prequeue_station(request: Request, db: Session = Depends(get_db)):
-    """Paparan skrin Stesen Pra-Giliran & Saringan Pantas (/counter/station)"""
+    """Memaparkan stesen saringan bersama senarai menunggu awal"""
     patients = (
         db.query(PatientQueue)
         .filter(PatientQueue.is_served == False)
         .order_by(PatientQueue.created_at.asc())
+        .limit(15)
         .all()
     )
     return templates.TemplateResponse(
         request=request,
         name="prequeue_station.html",
-        context={"patients": patients}
+        context={
+            "request": request,
+            "patients": patients
+        }
     )
 
 
 @router.get("/station/patient-card/{patient_id}", response_class=HTMLResponse)
 def get_patient_card(request: Request, patient_id: int, db: Session = Depends(get_db)):
-    """Memuatkan kad butiran pesakit terpilih ke dalam zon aktif (#active-patient-zone)"""
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if not patient:
         return HTMLResponse("<div class='p-4 text-xs text-rose-500 font-bold'>Pesakit tidak dijumpai.</div>")
@@ -175,7 +239,6 @@ def get_patient_card(request: Request, patient_id: int, db: Session = Depends(ge
 
 @router.get("/station/scan-select/{scanned_code}", response_class=HTMLResponse)
 def scan_select_patient(request: Request, scanned_code: str, db: Session = Depends(get_db)):
-    """Dipanggil apabila pengimbas membaca QR atau No. KP pesakit"""
     clean_code = scanned_code.strip().upper().replace("-", "")
     
     patient = db.query(PatientQueue).filter(
@@ -206,7 +269,7 @@ def scan_select_patient(request: Request, scanned_code: str, db: Session = Depen
 
 
 @router.post("/station/process-ticket", response_class=HTMLResponse)
-def process_station_ticket(
+async def process_station_ticket(
     request: Request,
     background_tasks: BackgroundTasks,
     patient_id: Optional[int] = Form(None),
@@ -221,34 +284,17 @@ def process_station_ticket(
     db: Session = Depends(get_db)
 ):
     if not patient_id:
-        return HTMLResponse("""
-            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold animate-fade-in">
-                ⚠️ Sila pilih pesakit daripada senarai terlebih dahulu sebelum memilih kategori tiket!
-            </div>
-        """)
+        return HTMLResponse("<div class='p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold'>⚠️ Sila pilih pesakit terlebih dahulu!</div>")
 
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if not patient:
-        return HTMLResponse("""
-            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold">
-                ⚠️ Rekod pesakit tidak ditemui dalam sistem.
-            </div>
-        """)
+        return HTMLResponse("<div class='p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold'>⚠️ Rekod tidak ditemui.</div>")
 
-    # 1. Panggil automasi SystmOne di latar belakang tanpa melengahkan UI web
     background_tasks.add_task(trigger_systmone_ticket, category)
 
-    # 2. Format Nombor Giliran & Keutamaan Fast-Track
-    if is_priority:
-        effective_prefix = f"E-{prefix}"
-        generated_ticket = f"{effective_prefix}-{patient.token_code.split('-')[-1]}"
-    else:
-        if patient.token_code.startswith(prefix):
-            generated_ticket = patient.token_code
-        else:
-            generated_ticket = f"{prefix}-{patient.token_code}"
+    clean_num = re.sub(r'^[A-Za-z\-]+', '', patient.token_code)
+    generated_ticket = f"E-{prefix}-{clean_num}" if is_priority else f"{prefix}-{clean_num}"
 
-    # 3. Kemas kini data pesakit & tandakan sebagai selesai saringan
     patient.systmone_queue_no = generated_ticket
     patient.is_served = True
     patient.is_priority = bool(is_priority)
@@ -259,45 +305,60 @@ def process_station_ticket(
     patient.lab_notes = lab_notes.strip() if lab_notes else None
     db.commit()
 
-    priority_badge = ""
-    if is_priority:
-        priority_badge = f'<span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded ml-2">⚡ FAST-TRACK ({priority_reason})</span>'
+    # Siarkan kemas kini SSE kepada semua pelanggan
+    background_tasks.add_task(sse_manager.broadcast_refresh)
 
-    # 4. Maklum balas UI bersama HTMX Out-of-Band Swap untuk zon pesakit aktif
     response_html = f"""<div class="p-3.5 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-emerald-950 text-xs font-bold flex justify-between items-center shadow-sm animate-fade-in mb-3">
-    <div class="flex items-center gap-2">
-        <span class="text-lg">✓</span>
-        <span>Tiket <span class="text-blue-700 underline font-black">[{generated_ticket}]</span> ({category}){priority_badge} siap diproses & dicetuskan ke SystmOne!</span>
+        <span>Tiket <span class="text-blue-700 underline font-black">[{generated_ticket}]</span> ({category}) sedia diproses!</span>
     </div>
-    <span class="text-[10px] text-emerald-700 font-semibold bg-emerald-100 px-2.5 py-1 rounded-full">Sedia Masuk</span>
-</div>
-<div id="active-patient-zone" hx-swap-oob="true">
-    <div class="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-8 text-center text-slate-400 shadow-sm animate-fade-in">
-        <span class="text-4xl block mb-2">📷</span>
-        <p class="font-extrabold text-sm text-slate-700">Sedia Menerima Imbasan Kod Bar / QR Pesakit</p>
-        <p class="text-xs text-slate-400 mt-1">Imbas kod QR pada telefon pesakit atau klik pada senarai menunggu di sebelah kanan.</p>
-    </div>
-</div>"""
+    <div id="active-patient-zone" hx-swap-oob="true">
+        <div class="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-8 text-center text-slate-400">
+            <span class="text-4xl block mb-2">📷</span>
+            <p class="font-extrabold text-sm text-slate-700">Sedia Menerima Imbasan Kod Bar / QR Seterusnya</p>
+        </div>
+    </div>"""
 
-    headers = {
-        "HX-Trigger": json.dumps({
-            "refreshQueue": True
-        })
-    }
-    return HTMLResponse(content=response_html, headers=headers)
+    return HTMLResponse(content=response_html)
 
 
 # ==========================================
-# 2. KAUNTER PENDAFTARAN UTAMA & POLING SENARAI
+# 3. STREAM SSE & POLING SENARAI
 # ==========================================
+
+@router.get("/stream")
+async def sse_queue_stream(request: Request):
+    async def event_generator():
+        q = await sse_manager.subscribe()
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    await asyncio.wait_for(q.get(), timeout=20.0)
+                    # Pastikan nama event tepat: "queueUpdate"
+                    yield {
+                        "event": "queueUpdate",
+                        "data": "refresh"
+                    }
+                except asyncio.TimeoutError:
+                    # Ping keep-alive untuk mengelakkan sambungan ditutup oleh pelayar
+                    yield {
+                        "event": "ping",
+                        "data": "keep-alive"
+                    }
+        finally:
+            sse_manager.unsubscribe(q)
+
+    return EventSourceResponse(event_generator())
+
 
 @router.get("", response_class=HTMLResponse)
 def counter_dashboard(request: Request, db: Session = Depends(get_db)):
-    """Papan pemuka kaunter utama staf (/counter)"""
     patients = (
         db.query(PatientQueue)
         .filter(PatientQueue.is_served == False)
         .order_by(PatientQueue.created_at.asc())
+        .limit(30)
         .all()
     )
     return templates.TemplateResponse(
@@ -305,7 +366,6 @@ def counter_dashboard(request: Request, db: Session = Depends(get_db)):
         name="staff_dashboard.html",
         context={"patients": patients}
     )
-
 
 
 @router.get("/queue-rows", response_class=HTMLResponse)
@@ -316,7 +376,6 @@ def get_queue_rows(
     station_mode: Optional[bool] = False,
     db: Session = Depends(get_db)
 ):
-    # 1. Kira jumlah sebenar keseluruhan pesakit menunggu untuk lencana (cth: 900 orang)
     total_waiting = db.query(PatientQueue).filter(PatientQueue.is_served == False).count()
     query = db.query(PatientQueue).filter(PatientQueue.is_served == False)
 
@@ -329,11 +388,8 @@ def get_queue_rows(
         upper_search = raw_search.upper()
         conditions = []
 
-        # A. Carian Token (cth: D0001, A0012)
         conditions.append(PatientQueue.token_code.like(f"%{upper_search}%"))
 
-        # B. Carian No. KP:
-        # Jika taip 4 digit -> padankan 4 digit belakang No. KP
         if clean_digits.isdigit() and len(clean_digits) == 4:
             conditions.append(PatientQueue.ic_passport.like(f"%{clean_digits}"))
         elif clean_digits.isdigit() and len(clean_digits) > 4:
@@ -341,7 +397,6 @@ def get_queue_rows(
         else:
             conditions.append(PatientQueue.ic_passport.like(f"%{upper_search}%"))
 
-        # C. Carian Nama: Pecahkan setiap perkataan (multi-word match)
         name_words = [w for w in upper_search.split() if len(w) > 1]
         if name_words:
             for word in name_words:
@@ -350,12 +405,9 @@ def get_queue_rows(
             conditions.append(PatientQueue.full_name.like(f"%{upper_search}%"))
 
         query = query.filter(or_(*conditions))
-        
-        # Hadkan carian kepada 10 orang teratas supaya tindak balas carian serta-merta
         patients = query.order_by(PatientQueue.created_at.asc()).limit(10).all()
     else:
-        # Paparan biasa: ambil 20 pesakit terawal sahaja supaya DOM kekal ringan dan laju
-        patients = query.order_by(PatientQueue.created_at.asc()).limit(20).all()
+        patients = query.order_by(PatientQueue.created_at.asc()).limit(15).all()
 
     referer = request.headers.get("referer", "")
     is_station = station_mode or ("station" in referer)
@@ -367,10 +419,7 @@ def get_queue_rows(
         context={"patients": patients}
     )
     
-    # Hantar jumlah pesakit keseluruhan ke UI badge
     trigger_payload = {"value": total_waiting}
-    
-    # Jika hasil carian menghasilkan tepat 1 padanan pesakit, auto-select ke panel kiri
     if raw_search and len(patients) == 1 and is_station:
         trigger_payload["autoSelectPatientId"] = patients[0].id
 
@@ -380,12 +429,14 @@ def get_queue_rows(
     
     return response
 
+
 @router.post("/serve/{patient_id}")
-def mark_served(patient_id: int, db: Session = Depends(get_db)):
+async def mark_served(patient_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if patient:
         patient.is_served = True
         db.commit()
+        background_tasks.add_task(sse_manager.broadcast_refresh)
     return Response(content="", status_code=200)
 
 

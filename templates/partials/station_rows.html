@@ -3,12 +3,12 @@
 <tr id="station-row-{{ p.id }}" 
     class="hover:bg-blue-50/70 transition-colors group border-b border-slate-100 last:border-0">
     
-    <!-- 1. Masa -->
+    <!-- 1. Masa Pendaftaran -->
     <td class="p-3 font-bold text-slate-400 whitespace-nowrap text-xs">
         {{ p.created_at.strftime("%H:%M") if p.created_at else "-" }}
     </td>
 
-    <!-- 2. Pas Daftar & Edit Cepat -->
+    <!-- 2. Pas Daftar & Butang Edit Cepat -->
     <td class="p-3 whitespace-nowrap">
         <div id="token-container-{{ p.id }}" class="flex items-center gap-1.5">
             <span class="inline-flex px-2 py-0.5 rounded-md text-[11px] font-black 
@@ -29,7 +29,7 @@
         </div>
     </td>
 
-    <!-- 3. Nama Pesakit & Petunjuk Ringkas -->
+    <!-- 3. Nama Pesakit & No. KP -->
     <td class="p-3">
         <div class="flex items-center gap-1.5">
             <span class="font-extrabold text-slate-900 text-xs block truncate max-w-[190px]" title="{{ p.full_name }}">
@@ -71,7 +71,7 @@
 </tr>
 {% else %}
 <tr>
-    <td colspan="4" class="p-10 text-center text-slate-400 font-medium text-xs">
+    <td colspan="4" class="p-8 text-center text-slate-400 font-bold text-xs">
         Tiada pesakit dalam senarai menunggu saringan.
     </td>
 </tr>

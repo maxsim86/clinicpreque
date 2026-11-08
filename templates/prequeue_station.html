@@ -1,17 +1,23 @@
 <!DOCTYPE html>
 <html lang="ms">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stesen Pra-Giliran & Saringan - KK Pandamaran</title>
-    <!-- Tailwind CSS & HTMX -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- CSS Tempatan (Bebas Internet Luar) -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/tailwind.min.css') }}">
+    
+    <!-- JS Tempatan Bersama Ekstensi SSE -->
     <script src="{{ url_for('static', path='js/htmx.min.js') }}"></script>
+    <script src="{{ url_for('static', path='js/htmx-sse.js') }}"></script>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         svg { width: 16px !important; height: 16px !important; display: inline-block; }
     </style>
 </head>
+
 <body class="bg-slate-100 min-h-screen p-4 text-slate-800">
 
     <!-- Header Atas: Status Perkakasan, Cetak Semula & Rangkaian -->
@@ -55,7 +61,7 @@
         <!-- ================= BAHAGIAN KIRI (7 Kolum): KAD PESAKIT & FORM SARINGAN ================= -->
         <div class="lg:col-span-7 space-y-4">
 
-            <!-- Bekas Dinamik HTMX: Menukar paparan kad apabila pesakit dipilih / diimbas -->
+            <!-- Bekas Dinamik HTMX: Kad Pesakit Aktif -->
             <div id="active-patient-zone">
                 <div class="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-8 text-center text-slate-400 shadow-sm">
                     <span class="text-4xl block mb-2">📷</span>
@@ -64,14 +70,13 @@
                 </div>
             </div>
 
-            <!-- Borang Pemilihan Aliran & Ambil Darah (Dikawal HTMX) -->
+            <!-- Borang Pemilihan Aliran & Ambil Darah -->
             <form id="triage-form"
                   hx-post="/counter/station/process-ticket"
                   hx-target="#feedback-zone"
                   hx-swap="innerHTML"
                   class="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm space-y-4">
                 
-                <!-- Ruang Notifikasi Maklum Balas Semasa Diproses -->
                 <div id="feedback-zone"></div>
 
                 <!-- Input Tersembunyi: Kategori dan Prefix Tiket -->
@@ -92,8 +97,9 @@
                                 ⚡ Laluan Pantas / Keutamaan (Fast-Track)
                             </span>
                         </label>
-                        <span class="text-[10px] font-black bg-emerald-200/90 text-emerald-800 px-2 py-0.5 rounded-md">
-                            Warga Emas / OKU / Bayi
+                        <span class="text-[10px] font-black bg-emerald-200/90 text-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <span>Warga Emas / OKU / Bayi</span>
+                            <kbd class="bg-white/80 px-1 rounded text-[9px] border border-emerald-300 font-mono">[F]</kbd>
                         </span>
                     </div>
 
@@ -101,16 +107,16 @@
                     <div id="priority-options" class="hidden pt-2 border-t border-emerald-200/70">
                         <div class="grid grid-cols-4 gap-1.5 text-[11px] font-bold text-slate-700">
                             <label class="bg-white border border-emerald-200 p-2 rounded-xl flex items-center justify-center gap-1 cursor-pointer has-[:checked]:bg-emerald-600 has-[:checked]:text-white transition">
-                                <input type="radio" name="priority_reason" value="WARGA_EMAS" class="hidden" checked> 👴 Warga Emas
+                                <input type="radio" id="p-reason-warga-emas" name="priority_reason" value="WARGA_EMAS" class="hidden" checked> 👴 Warga Emas
                             </label>
                             <label class="bg-white border border-emerald-200 p-2 rounded-xl flex items-center justify-center gap-1 cursor-pointer has-[:checked]:bg-emerald-600 has-[:checked]:text-white transition">
-                                <input type="radio" name="priority_reason" value="OKU" class="hidden"> ♿ OKU / Kerusi
+                                <input type="radio" id="p-reason-oku" name="priority_reason" value="OKU" class="hidden"> ♿ OKU / Kerusi
                             </label>
                             <label class="bg-white border border-emerald-200 p-2 rounded-xl flex items-center justify-center gap-1 cursor-pointer has-[:checked]:bg-emerald-600 has-[:checked]:text-white transition">
-                                <input type="radio" name="priority_reason" value="BAYI" class="hidden"> 👶 Bayi / Anak
+                                <input type="radio" id="p-reason-bayi" name="priority_reason" value="BAYI" class="hidden"> 👶 Bayi / Anak
                             </label>
                             <label class="bg-white border border-emerald-200 p-2 rounded-xl flex items-center justify-center gap-1 cursor-pointer has-[:checked]:bg-emerald-600 has-[:checked]:text-white transition">
-                                <input type="radio" name="priority_reason" value="IBU_HAMIL" class="hidden"> 🤰 Hamil Sarat
+                                <input type="radio" id="p-reason-hamil" name="priority_reason" value="IBU_HAMIL" class="hidden"> 🤰 Hamil Sarat
                             </label>
                         </div>
                     </div>
@@ -128,12 +134,14 @@
                                    class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-0">
                             <span class="text-xs font-black text-blue-950 uppercase tracking-wide">💉 Pesakit Ambil Darah (Phlebotomy)</span>
                         </label>
-                        <span class="text-[10px] font-black bg-blue-200/80 text-blue-800 px-2 py-0.5 rounded-md">Bilik Makmal</span>
+                        <span class="text-[10px] font-black bg-blue-200/80 text-blue-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <span>Bilik Makmal</span>
+                            <kbd class="bg-white/80 px-1 rounded text-[9px] border border-blue-300 font-mono">[B]</kbd>
+                        </span>
                     </div>
 
                     <!-- Pilihan Ujian Darah -->
                     <div id="blood-test-options" class="hidden space-y-2.5 pt-2 border-t border-blue-200/60">
-                        <!-- Status Puasa -->
                         <div class="flex gap-2">
                             <label class="flex-1 text-center py-2 border-2 border-slate-200 rounded-xl bg-white text-xs font-bold text-slate-700 cursor-pointer has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-900 transition">
                                 <input type="radio" id="fasting-puasa" name="fasting" value="PUASA" class="hidden" checked> 🍽️ Berpuasa
@@ -203,52 +211,67 @@
 
                 <!-- Butang Kategori Aliran (1-Click Submit & Print) -->
                 <div>
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2.5">Pilih Kategori untuk Cetak Tiket Bixolon:</h3>
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2.5">Pilih Kategori untuk Cetak Tiket:</h3>
                     
                     <div class="grid grid-cols-2 gap-3">
-                        <!-- 1. OPD Demam -->
+                        <!-- 1. OPD Demam (Kekunci [1]) -->
                         <button type="submit" 
                                 onclick="setCategoryAndPrefix('OPD', 'D')"
                                 class="flex flex-col items-start p-4 rounded-2xl border-2 border-rose-200 bg-rose-50/50 hover:bg-rose-100/70 active:scale-[0.98] transition text-left group">
                             <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">🤒</span>
                             <span class="font-black text-sm text-rose-950">OPD - Demam / Sakit</span>
-                            <span class="text-[10px] font-black text-rose-600 bg-white px-2 py-0.5 rounded-md border border-rose-200 mt-2">Prefix: [ D ]</span>
+                            <div class="flex items-center gap-1.5 mt-2">
+                                <span class="text-[10px] font-black text-rose-600 bg-white px-2 py-0.5 rounded-md border border-rose-200">Prefix: [ D ]</span>
+                                <span class="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono font-bold">Kekunci [1]</span>
+                            </div>
                         </button>
 
-                        <!-- 2. OPD Prosedur -->
+                        <!-- 2. OPD Prosedur (Kekunci [2]) -->
                         <button type="submit" 
                                 onclick="setCategoryAndPrefix('OPD', 'P')"
                                 class="flex flex-col items-start p-4 rounded-2xl border-2 border-amber-200 bg-amber-50/50 hover:bg-amber-100/70 active:scale-[0.98] transition text-left group">
                             <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">🩹</span>
-                            <span class="font-black text-sm text-amber-950">OPD - Dressing / Prosedur</span>
-                            <span class="text-[10px] font-black text-amber-600 bg-white px-2 py-0.5 rounded-md border border-amber-200 mt-2">Prefix: [ P ]</span>
+                            <span class="font-black text-sm text-amber-950">OPD - Prosedur / Luka</span>
+                            <div class="flex items-center gap-1.5 mt-2">
+                                <span class="text-[10px] font-black text-amber-600 bg-white px-2 py-0.5 rounded-md border border-amber-200">Prefix: [ P ]</span>
+                                <span class="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono font-bold">Kekunci [2]</span>
+                            </div>
                         </button>
 
-                        <!-- 3. Temujanji Pakar / FMS -->
+                        <!-- 3. Temujanji Pakar (Kekunci [3]) -->
                         <button type="submit" 
                                 onclick="setCategoryAndPrefix('PAKAR', 'S')" 
                                 class="flex flex-col items-start p-4 rounded-2xl border-2 border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100/80 active:scale-[0.98] transition text-left group">
                             <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">🩺</span>
                             <span class="font-black text-sm text-indigo-950">Temujanji Pakar / FMS</span>
-                            <span class="text-[10px] font-black text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200 mt-2">Prefix: [ S ]</span>
+                            <div class="flex items-center gap-1.5 mt-2">
+                                <span class="text-[10px] font-black text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200">Prefix: [ S ]</span>
+                                <span class="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono font-bold">Kekunci [3]</span>
+                            </div>
                         </button>
 
-                        <!-- 4. MCH Ibu & Anak -->
+                        <!-- 4. MCH Ibu & Anak (Kekunci [4]) -->
                         <button type="submit" 
                                 onclick="setCategoryAndPrefix('MCH', 'M')"
                                 class="flex flex-col items-start p-4 rounded-2xl border-2 border-pink-200 bg-pink-50/50 hover:bg-pink-100/70 active:scale-[0.98] transition text-left group">
                             <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">👶</span>
                             <span class="font-black text-sm text-pink-950">MCH - Ibu Hamil / Anak</span>
-                            <span class="text-[10px] font-black text-pink-600 bg-white px-2 py-0.5 rounded-md border border-pink-200 mt-2">Prefix: [ M ]</span>
+                            <div class="flex items-center gap-1.5 mt-2">
+                                <span class="text-[10px] font-black text-pink-600 bg-white px-2 py-0.5 rounded-md border border-pink-200">Prefix: [ M ]</span>
+                                <span class="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono font-bold">Kekunci [4]</span>
+                            </div>
                         </button>
 
-                        <!-- 5. Farmasi / Ambil Ubat -->
+                        <!-- 5. Farmasi (Kekunci [5]) -->
                         <button type="submit" 
                                 onclick="setCategoryAndPrefix('OPD', 'U')"
                                 class="flex flex-col items-start p-4 rounded-2xl border-2 border-purple-200 bg-purple-50/50 hover:bg-purple-100/70 active:scale-[0.98] transition text-left group col-span-2">
                             <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">💊</span>
                             <span class="font-black text-sm text-purple-950">Farmasi / Ambil Ubat</span>
-                            <span class="text-[10px] font-black text-purple-600 bg-white px-2 py-0.5 rounded-md border border-purple-200 mt-2">Prefix: [ U ]</span>
+                            <div class="flex items-center gap-1.5 mt-2">
+                                <span class="text-[10px] font-black text-purple-600 bg-white px-2 py-0.5 rounded-md border border-purple-200">Prefix: [ U ]</span>
+                                <span class="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono font-bold">Kekunci [5]</span>
+                            </div>
                         </button>
                     </div>
                 </div>
@@ -256,16 +279,28 @@
         </div>
 
         <!-- ================= BAHAGIAN KANAN (5 Kolum): SENARAI MENUNGGU ================= -->
-        <div class="lg:col-span-5 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col h-[calc(100vh-120px)]">
+        <!-- SSE disambungkan di pembungkus ini -->
+        <div class="lg:col-span-5 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col h-[calc(100vh-120px)]"
+             hx-ext="sse" 
+             sse-connect="/counter/stream">
             
             <div class="flex justify-between items-center mb-3.5">
                 <div class="flex items-center gap-2">
-                    <h2 class="text-sm font-black text-slate-900 tracking-tight">Senarai Pra-Daftar Menunggu</h2>
+                    <h2 class="text-sm font-black text-slate-900 tracking-tight">Senarai Menunggu</h2>
                     <span class="bg-blue-100 text-blue-800 text-[11px] font-black px-2 py-0.5 rounded-full" id="queue-count-badge">
                         {{ patients|length }}
                     </span>
                 </div>
-                <span class="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full border border-slate-200">Live (3s)</span>
+                
+                <!-- Butang Buka Modal Walk-In -->
+                <button type="button" 
+                        onclick="openWalkInModal()" 
+                        class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-[11px] rounded-xl shadow-sm shadow-emerald-600/20 transition flex items-center gap-1.5"
+                        title="Pintasan: Tekan [W]">
+                    <span>+</span>
+                    <span>Walk-In Segera</span>
+                    <kbd class="bg-emerald-800/60 px-1 rounded text-[9px] font-mono">[W]</kbd>
+                </button>
             </div>
 
             <!-- Kotak Carian Pantas -->
@@ -279,14 +314,13 @@
                 <input type="text" 
                        id="search-input" 
                        name="search" 
-                       placeholder="Carian: 4 Digit Akhir IC /  Nama / Imbas Barcode..."
-                       hx-get="/counter/queue-rows"
-                       hx-trigger="keyup changed delay:200ms, search"
+                       placeholder="Carian: 4 Digit Akhir IC / Nama / Imbas Barcode..."
+                       hx-get="/counter/queue-rows?station_mode=true"
+                       hx-trigger="keyup changed delay:250ms, search"
                        hx-target="#queue-table-body"
                        autocomplete="off"
                        class="w-full pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold uppercase outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition shadow-inner placeholder:normal-case placeholder:font-medium placeholder:text-slate-400">
 
-                <!-- Butang Padam Segera -->
                 <button type="button" 
                         id="clear-search-btn"
                         onclick="clearSearchInput()"
@@ -298,6 +332,7 @@
                 </button>
             </div>
 
+            <!-- Jadual Senarai Menunggu -->
             <div class="overflow-y-auto flex-1 border border-slate-200/80 rounded-2xl">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead class="bg-slate-50/90 sticky top-0 border-b border-slate-200 text-slate-400 uppercase font-black text-[10px] tracking-wider z-10">
@@ -308,27 +343,205 @@
                             <th class="p-3 text-right w-20">Tindakan</th>
                         </tr>
                     </thead>
-
                     <tbody id="queue-table-body" 
-                           hx-get="/counter/queue-rows" 
-                           hx-trigger="every 3s, refreshQueue from:body" 
+                           hx-get="/counter/queue-rows?station_mode=true"
+                           hx-trigger="refreshQueue from:body, sse:queueUpdate"
                            hx-include="#search-input"
+                           hx-swap="innerHTML"
                            class="divide-y divide-slate-100">
                         {% include "partials/station_rows.html" %}
                     </tbody>
                 </table>
             </div>
 
-        </div>
+        </div> <!-- Penutup bahagian kanan (lg:col-span-5) -->
 
+    </div> <!-- Penutup grid utama (grid-cols-12) -->
+
+    <!-- MODAL POP-UP DAFTAR WALK-IN (TANPA TELEFON) -->
+    <div id="walkin-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🧓</span>
+                    <div>
+                        <h3 class="text-sm font-black text-slate-900">Daftar Walk-In (Tanpa Telefon)</h3>
+                        <p class="text-[11px] text-slate-400 font-bold">Warga Emas / Kecemasan / Tiada Gajet</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeWalkInModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+
+            <form id="walkin-form"
+                  hx-post="/counter/station/quick-walkin"
+                  hx-target="#active-patient-zone"
+                  hx-swap="innerHTML"
+                  class="space-y-3.5">
+                <div>
+                    <label class="text-[11px] font-black text-slate-500 uppercase block mb-1">No. KP / Passport <span class="text-rose-500">*</span></label>
+                    <input type="text" 
+                           id="walkin-ic"
+                           name="ic_passport" 
+                           required 
+                           placeholder="Cth: 480102105433"
+                           autocomplete="off"
+                           class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold uppercase outline-none focus:bg-white focus:border-blue-500 transition">
+                </div>
+
+                <div>
+                    <label class="text-[11px] font-black text-slate-500 uppercase block mb-1">Nama Penuh Pesakit <span class="text-rose-500">*</span></label>
+                    <input type="text" 
+                           id="walkin-name"
+                           name="full_name" 
+                           required 
+                           placeholder="Cth: AHMAD BIN ABDULLAH"
+                           autocomplete="off"
+                           class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold uppercase outline-none focus:bg-white focus:border-blue-500 transition">
+                </div>
+
+                <div>
+                    <label class="text-[11px] font-black text-slate-500 uppercase block mb-1">No. Telefon (Pilihan)</label>
+                    <input type="text" 
+                           id="walkin-phone"
+                           name="phone_number" 
+                           placeholder="Cth: 0123456789"
+                           autocomplete="off"
+                           class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeWalkInModal()" class="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition">
+                        Batal (Esc)
+                    </button>
+                    <button type="submit" class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition">
+                        Daftar & Terus Pilih ➔
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- Logik Pengendali JS -->
+    <!-- Skrip Pengendali & Pintasan Papan Kekunci -->
     <script>
         const searchInput = document.getElementById('search-input');
         const clearBtn = document.getElementById('clear-search-btn');
 
-        // Togol butang padam input carian
+        // ==========================================
+        // 1. SISTEM MAKLUM BALAS AUDIO (WEB AUDIO API)
+        // ==========================================
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playAudioSuccess() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const now = audioCtx.currentTime;
+            const osc1 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(587.33, now); // D5
+            osc1.frequency.setValueAtTime(880, now + 0.1); // A5
+
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+            osc1.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc1.start(now);
+            osc1.stop(now + 0.35);
+        }
+
+        function playAudioError() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.setValueAtTime(110, now + 0.15);
+
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.4);
+        }
+
+        document.body.addEventListener('playAudioSuccess', playAudioSuccess);
+        document.body.addEventListener('playAudioError', playAudioError);
+
+        // ==========================================
+        // 2. KEMAS KINI JADUAL SECARA AUTOMATIK (SSE & LOCAL)
+        // ==========================================
+        document.body.addEventListener('htmx:sseMessage', function (e) {
+    htmx.ajax('GET', '/counter/queue-rows?station_mode=true', {
+        target: '#queue-table-body',
+        swap: 'innerHTML'
+    });
+});
+
+        document.body.addEventListener('htmx:sseMessage', function(e) {
+            triggerQueueReload();
+        });
+
+        // Semakan sambungan SSE di konsol
+document.body.addEventListener('htmx:sseOpen', function (e) {
+    console.log('✅ SSE Berjaya Disambungkan ke /counter/stream');
+});
+
+        document.body.addEventListener('htmx:sseError', function (e) {
+    console.error('❌ Sambungan SSE Terputus / Gagal');
+});
+
+        // ==========================================
+        // 3. PENGURUSAN MODAL WALK-IN
+        // ==========================================
+        function openWalkInModal() {
+            const modal = document.getElementById('walkin-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('walkin-ic').focus();
+            }, 50);
+        }
+
+        function closeWalkInModal() {
+            const modal = document.getElementById('walkin-modal');
+            modal.classList.add('hidden');
+            document.getElementById('walkin-ic').value = '';
+            document.getElementById('walkin-name').value = '';
+            document.getElementById('walkin-phone').value = '';
+        }
+
+        document.body.addEventListener('closeWalkInModal', closeWalkInModal);
+
+        // ==========================================
+        // 4. INTEGRASI BUNYI HTMX
+        // ==========================================
+        document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+            if (evt.detail.elt && evt.detail.elt.id === 'triage-form') {
+                playAudioSuccess();
+            }
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target.id === 'active-patient-zone') {
+                if (evt.detail.target.innerHTML.includes('Pesakit Tidak Ditemui!')) {
+                    playAudioError();
+                } else if (evt.detail.target.querySelector('#patient-ic-display')) {
+                    playAudioSuccess();
+                }
+            }
+        });
+
+        // ==========================================
+        // 5. KOTAK CARIAN PANTAS
+        // ==========================================
         searchInput.addEventListener('input', function() {
             if (this.value.trim().length > 0) {
                 clearBtn.classList.remove('hidden');
@@ -337,18 +550,13 @@
             }
         });
 
-        // Kosongkan carian
         function clearSearchInput() {
             searchInput.value = '';
             clearBtn.classList.add('hidden');
-            htmx.ajax('GET', '/counter/queue-rows', {
-                target: '#queue-table-body',
-                swap: 'innerHTML'
-            });
+            triggerQueueReload();
             searchInput.focus();
         }
 
-        // Imbasan Barcode dengan kekunci Enter
         searchInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -365,7 +573,76 @@
             }
         });
 
-        // Pengendali kiraan senarai & Auto-Select pesakit jika hasil carian tepat 1 orang
+        // ==========================================
+        // 6. PINTASAN PAPAN KEKUNCI (HOTKEYS)
+        // ==========================================
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('walkin-modal');
+            const isModalOpen = !modal.classList.contains('hidden');
+
+            if (e.key === 'Escape') {
+                if (isModalOpen) {
+                    closeWalkInModal();
+                    return;
+                }
+            }
+
+            if (!isModalOpen && e.key.toLowerCase() === 'w' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                e.preventDefault();
+                openWalkInModal();
+                return;
+            }
+
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                return;
+            }
+
+            const patientIdInput = document.querySelector('input[name="patient_id"]');
+            const hasActivePatient = patientIdInput && patientIdInput.value;
+
+            if (hasActivePatient) {
+                if (['1', '2', '3', '4', '5'].includes(e.key)) {
+                    e.preventDefault();
+                    const mapping = {
+                        '1': ['OPD', 'D'],
+                        '2': ['OPD', 'P'],
+                        '3': ['PAKAR', 'S'],
+                        '4': ['MCH', 'M'],
+                        '5': ['OPD', 'U']
+                    };
+                    setCategoryAndPrefix(mapping[e.key][0], mapping[e.key][1]);
+                    document.getElementById('triage-form').requestSubmit();
+                    return;
+                }
+
+                if (e.key.toLowerCase() === 'f') {
+                    e.preventDefault();
+                    const priorityCheck = document.getElementById('check-priority');
+                    if (priorityCheck) {
+                        priorityCheck.checked = !priorityCheck.checked;
+                        togglePriorityOptions(priorityCheck.checked);
+                    }
+                    return;
+                }
+                if (e.key.toLowerCase() === 'b') {
+                    e.preventDefault();
+                    const bloodCheck = document.getElementById('check-blood-test');
+                    if (bloodCheck) {
+                        bloodCheck.checked = !bloodCheck.checked;
+                        toggleBloodPanel(bloodCheck.checked);
+                    }
+                    return;
+                }
+            }
+
+            if (!hasActivePatient && !isModalOpen && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                searchInput.focus();
+            }
+        });
+
+        // ==========================================
+        // 7. AUTO-SELECT & JUMLAH MENUNGGU
+        // ==========================================
         document.body.addEventListener('updateQueueCount', function(evt) {
             const badge = document.getElementById('queue-count-badge');
             if (!badge) return;
@@ -374,7 +651,6 @@
             if (typeof evt.detail === 'object' && evt.detail !== null) {
                 count = evt.detail.value !== undefined ? evt.detail.value : 0;
 
-                // Auto-select kad pesakit ke panel kiri jika carian ada 1 padanan tepat
                 if (evt.detail.autoSelectPatientId && searchInput.value.trim() !== '') {
                     htmx.ajax('GET', `/counter/station/patient-card/${evt.detail.autoSelectPatientId}`, {
                         target: '#active-patient-zone',
@@ -389,7 +665,9 @@
             badge.textContent = count;
         });
 
-        // Pakej Pantas Ujian Makmal (Presets)
+        // ==========================================
+        // 8. PRESET UJIAN MAKMAL
+        // ==========================================
         function applyBloodPreset(presetType) {
             const checkboxes = document.querySelectorAll('input[name="test_type"]');
             const fastingPuasa = document.getElementById('fasting-puasa');
@@ -426,7 +704,6 @@
             }
         }
 
-        // Serlahkan baris aktif
         function highlightRow(rowId) {
             document.querySelectorAll('#queue-table-body tr').forEach(r => {
                 r.classList.remove('bg-blue-50', 'border-l-4', 'border-l-blue-600');
@@ -438,7 +715,6 @@
             }
         }
 
-        // Togol Keutamaan
         function togglePriorityOptions(show) {
             const options = document.getElementById('priority-options');
             if (show) {
@@ -448,7 +724,6 @@
             }
         }
 
-        // Togol Panel Darah
         function toggleBloodPanel(show) {
             const panel = document.getElementById('blood-test-options');
             if (show) {
@@ -458,13 +733,41 @@
             }
         }
 
-        // Tetapkan Kategori Tiket
         function setCategoryAndPrefix(category, prefix) {
             document.getElementById('selected-category').value = category;
             document.getElementById('selected-prefix').value = prefix;
         }
 
-        // Kosongkan kad apabila event clearActivePatient diterima
+        // ==========================================
+        // 9. AUTO-DETECT UMUR (PENGIRAAN DARI NO. KP)
+        // ==========================================
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target.id === 'active-patient-zone') {
+                const icSpan = document.getElementById('patient-ic-display');
+                if (!icSpan) return;
+
+                const ic = icSpan.textContent.replace(/[^0-9]/g, '');
+                if (ic.length >= 2) {
+                    const birthYearPrefix = parseInt(ic.substring(0, 2), 10);
+                    const birthYear = birthYearPrefix > 26 ? (1900 + birthYearPrefix) : (2000 + birthYearPrefix);
+                    const currentYear = new Date().getFullYear();
+                    const age = currentYear - birthYear;
+
+                    const priorityCheck = document.getElementById('check-priority');
+                    const wargaEmasRadio = document.getElementById('p-reason-warga-emas');
+
+                    if (age >= 60 && priorityCheck && wargaEmasRadio) {
+                        priorityCheck.checked = true;
+                        wargaEmasRadio.checked = true;
+                        togglePriorityOptions(true);
+                    }
+                }
+            }
+        });
+
+        // ==========================================
+        // 10. KOSONGKAN KAD (EVENT LISTENER)
+        // ==========================================
         document.body.addEventListener('clearActivePatient', function() {
             const activeZone = document.getElementById('active-patient-zone');
             if (activeZone) {
@@ -485,16 +788,6 @@
             if (bloodCheckbox) {
                 bloodCheckbox.checked = false;
                 toggleBloodPanel(false);
-            }
-        });
-
-        // Pengimbas fizikal sentiasa fokus ke input carian
-        document.addEventListener('keydown', function(e) {
-            const searchBox = document.getElementById('search-input');
-            if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-                if (e.key.length === 1 || e.key === 'Enter') {
-                    searchBox.focus();
-                }
             }
         });
     </script>
