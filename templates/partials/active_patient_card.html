@@ -5,27 +5,14 @@
 
     <!-- Bahagian Tajuk, Token & Masa Tiba -->
     <div class="flex justify-between items-start border-b border-slate-100 pb-3">
-        <div>
-            <div id="token-container-{{ p.id }}" class="flex items-center gap-1.5">
-                <span class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-lg tracking-wider">
-                    Token: {{ p.token_code }}
-                </span>
-                <button type="button" 
-                        hx-get="/counter/edit-token/{{ p.id }}" 
-                        hx-target="#token-container-{{ p.id }}" 
-                        hx-swap="outerHTML"
-                        class="text-xs text-slate-400 hover:text-blue-600 px-1 py-0.5 rounded hover:bg-slate-100 transition inline-flex items-center gap-1" 
-                        title="Edit nombor ini">
-                    <span>✏️</span>
-                    <span class="font-bold text-[11px]">Edit</span>
-                </button>
-            </div>
-            <h2 class="text-lg font-black text-slate-900 mt-2 tracking-tight">{{ p.full_name }}</h2>
-        </div>
-        <span class="text-xs text-slate-400 font-bold whitespace-nowrap">
-            Tiba: {{ p.created_at.strftime("%H:%M") if p.created_at else "-" }}
-        </span>
+    <div>
+        {% include "partials/token_badge.html" %}
+        <h2 class="text-lg font-black text-slate-900 mt-2 tracking-tight">{{ p.full_name }}</h2>
     </div>
+    <span class="text-xs text-slate-400 font-bold whitespace-nowrap">
+        Tiba: {{ p.created_at.strftime("%H:%M") if p.created_at else "-" }}
+    </span>
+</div>
 
     <!-- Grid No. KP & Telefon -->
     <div class="grid grid-cols-2 gap-2 text-xs">
@@ -35,8 +22,8 @@
                 <span class="font-extrabold text-slate-800 tracking-wide">{{ p.ic_passport }}</span>
             </div>
             <button type="button" 
-                    onclick="quickCopy('{{ p.ic_passport }}', 'No. KP')" 
-                    class="p-1 rounded bg-white hover:bg-slate-100 border border-slate-200 font-bold text-slate-600 shrink-0 transition" 
+                    onclick="navigator.clipboard.writeText('{{ p.ic_passport }}')" 
+                    class="p-1 rounded bg-white hover:bg-slate-100 border border-slate-200 font-bold text-slate-600 shrink-0 transition active:scale-95" 
                     title="Salin No. KP">
                 📋
             </button>
@@ -48,8 +35,8 @@
                 <span class="font-extrabold text-slate-800">{{ p.phone_number }}</span>
             </div>
             <button type="button" 
-                    onclick="quickCopy('{{ p.phone_number }}', 'Telefon')" 
-                    class="p-1 rounded bg-white hover:bg-slate-100 border border-slate-200 font-bold text-slate-600 shrink-0 transition" 
+                    onclick="navigator.clipboard.writeText('{{ p.phone_number }}')" 
+                    class="p-1 rounded bg-white hover:bg-slate-100 border border-slate-200 font-bold text-slate-600 shrink-0 transition active:scale-95" 
                     title="Salin No. Telefon">
                 📋
             </button>

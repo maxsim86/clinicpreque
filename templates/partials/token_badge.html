@@ -1,0 +1,14 @@
+<!-- templates/partials/token_badge.html -->
+<div id="token-badge-{{ patient.id }}" class="inline-flex items-center gap-1.5 group">
+    <span class="inline-flex px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+        Token: {{ patient.token_code }}
+    </span>
+    <button type="button" 
+            hx-get="/counter/edit-token/{{ patient.id }}" 
+            hx-target="#token-badge-{{ patient.id }}" 
+            hx-swap="outerHTML"
+            class="opacity-60 hover:opacity-100 p-0.5 text-slate-500 hover:text-blue-600 rounded transition text-xs" 
+            title="Edit Nombor Ikut SystmOne">
+        ✏️
+    </button>
+</div>

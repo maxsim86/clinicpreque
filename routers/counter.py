@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional
 
-from fastapi import APIRouter, Request, Form, Depends, Response
+from fastapi import APIRouter, Request, Form, Depends, Response, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -15,55 +15,23 @@ router = APIRouter(prefix="/counter", tags=["Counter"])
 templates = Jinja2Templates(directory="templates")
 
 
-# ==========================================
-# 0. FUNGSI PEMBANTU & EDIT TOKEN SEGERA
-# ==========================================
-
-def render_token_badge(patient: PatientQueue) -> str:
-    """Fungsi pembantu menghasilkan badge berserta butang edit mesra skrin sentuh"""
-    return f"""
-    <div id="token-container-{patient.id}" class="flex items-center gap-1 group">
-        <span class="inline-flex px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200">
-            {patient.token_code}
-        </span>
-        <button type="button" 
-                hx-get="/counter/edit-token/{patient.id}" 
-                hx-target="#token-container-{patient.id}" 
-                hx-swap="outerHTML"
-                class="opacity-60 hover:opacity-100 p-0.5 text-slate-500 hover:text-blue-600 rounded transition text-xs" 
-                title="Edit Nombor Ikut SystmOne">
-            ✏️
-        </button>
-    </div>
-    """
+# routers/counter.py
 
 @router.get("/edit-token/{patient_id}", response_class=HTMLResponse)
-def get_edit_token_form(patient_id: int, db: Session = Depends(get_db)):
-    """Memaparkan kotak input ringkas untuk menukar nombor token"""
+def get_edit_token_form(request: Request, patient_id: int, db: Session = Depends(get_db)):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if not patient:
         return HTMLResponse("<span class='text-xs text-rose-500 font-bold'>Tiada</span>", status_code=404)
         
-    return HTMLResponse(f"""
-        <form hx-post="/counter/update-token/{patient.id}" 
-              hx-target="#token-container-{patient.id}" 
-              hx-swap="outerHTML" 
-              class="flex items-center gap-1">
-            <input type="text" name="new_token" value="{patient.token_code}" 
-                   class="w-24 px-1.5 py-0.5 text-xs font-black uppercase border-2 border-blue-500 rounded bg-white outline-none focus:ring-1 focus:ring-blue-400"
-                   autofocus onfocus="this.select()">
-            <button type="submit" class="px-1.5 py-0.5 bg-emerald-600 text-white text-[10px] font-bold rounded hover:bg-emerald-700">✓</button>
-            <button type="button" 
-                    hx-get="/counter/cancel-edit-token/{patient.id}" 
-                    hx-target="#token-container-{patient.id}" 
-                    hx-swap="outerHTML"
-                    class="px-1.5 py-0.5 bg-slate-300 text-slate-700 text-[10px] font-bold rounded hover:bg-slate-400">✕</button>
-        </form>
-    """)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/token_edit_form.html",
+        context={"patient": patient}
+    )
+
 
 @router.post("/update-token/{patient_id}", response_class=HTMLResponse)
-def update_patient_token(patient_id: int, new_token: str = Form(...), db: Session = Depends(get_db)):
-    """Menyimpan nombor token baharu (sepadan dengan SystmOne)"""
+def update_patient_token(request: Request, patient_id: int, new_token: str = Form(...), db: Session = Depends(get_db)):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if patient:
         clean_token = new_token.strip().upper()
@@ -71,15 +39,25 @@ def update_patient_token(patient_id: int, new_token: str = Form(...), db: Sessio
         patient.systmone_queue_no = clean_token
         db.commit()
 
-    return HTMLResponse(render_token_badge(patient))
+    # Pulangkan lencana badge terus menggantikan <form> (hx-target="this")
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/token_badge.html",
+        context={"patient": patient}
+    )
+
 
 @router.get("/cancel-edit-token/{patient_id}", response_class=HTMLResponse)
-def cancel_edit_token(patient_id: int, db: Session = Depends(get_db)):
-    """Membatalkan mod edit dan kembali ke paparan badge asal"""
+def cancel_edit_token(request: Request, patient_id: int, db: Session = Depends(get_db)):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if not patient:
         return HTMLResponse("", status_code=404)
-    return HTMLResponse(render_token_badge(patient))
+        
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/token_badge.html",
+        context={"patient": patient}
+    )
 
 
 # ==========================================
@@ -101,6 +79,7 @@ def get_prequeue_station(request: Request, db: Session = Depends(get_db)):
         context={"patients": patients}
     )
 
+
 @router.get("/station/patient-card/{patient_id}", response_class=HTMLResponse)
 def get_patient_card(request: Request, patient_id: int, db: Session = Depends(get_db)):
     """Memuatkan kad butiran pesakit terpilih ke dalam zon aktif (#active-patient-zone)"""
@@ -111,15 +90,16 @@ def get_patient_card(request: Request, patient_id: int, db: Session = Depends(ge
     return templates.TemplateResponse(
         request=request,
         name="partials/active_patient_card.html",
-        context={"p": patient}
+        context={
+            "p": patient,
+            "patient": patient  
+        }
     )
+
 
 @router.get("/station/scan-select/{scanned_code}", response_class=HTMLResponse)
 def scan_select_patient(request: Request, scanned_code: str, db: Session = Depends(get_db)):
-    """
-    Dipanggil apabila staf mengimbas kod QR di telefon pesakit
-    Menerima token_code (cth: A00015) atau No. KP (cth: 860118086111)
-    """
+    """Dipanggil apabila pengimbas membaca QR atau No. KP pesakit"""
     clean_code = scanned_code.strip().upper().replace("-", "")
     
     patient = db.query(PatientQueue).filter(
@@ -145,12 +125,16 @@ def scan_select_patient(request: Request, scanned_code: str, db: Session = Depen
         context={"p": patient}
     )
 
+
 @router.post("/station/process-ticket", response_class=HTMLResponse)
 def process_station_ticket(
     request: Request,
+    background_tasks: BackgroundTasks,
     patient_id: Optional[int] = Form(None),
-    category: str = Form(...),       # Nilai 'OPD' atau 'MCH' dihantar dari butang
-    prefix: str = Form(...),         # Nilai 'D' (OPD), 'M' (MCH), dll.
+    category: str = Form(...),
+    prefix: str = Form(...),
+    is_priority: Optional[bool] = Form(False),
+    priority_reason: Optional[str] = Form(None),
     is_blood_test: Optional[bool] = Form(False),
     fasting: Optional[str] = Form(None),
     test_type: Optional[List[str]] = Form([]),
@@ -172,56 +156,60 @@ def process_station_ticket(
             </div>
         """)
 
-    # 1. PANGGIL SYSTMONE AUTOMATION (Tukar tab & cetak ikut kategori di latar belakang)
-    trigger_systmone_ticket(category=category)
+    # 1. Panggil automasi SystmOne di latar belakang tanpa melengahkan UI web
+    background_tasks.add_task(trigger_systmone_ticket, category)
 
-    # 2. Format Nombor Giliran (Mencegah awalan berulang seperti D-D00001)
-    if patient.token_code.startswith(prefix):
-        generated_ticket = patient.token_code
+    # 2. Format Nombor Giliran & Keutamaan Fast-Track
+    if is_priority:
+        effective_prefix = f"E-{prefix}"
+        generated_ticket = f"{effective_prefix}-{patient.token_code.split('-')[-1]}"
     else:
-        generated_ticket = f"{prefix}-{patient.token_code}"
-    
-    # 3. Kemas kini data ujian makmal & status giliran
+        if patient.token_code.startswith(prefix):
+            generated_ticket = patient.token_code
+        else:
+            generated_ticket = f"{prefix}-{patient.token_code}"
+
+    # 3. Kemas kini data pesakit & tandakan sebagai selesai saringan
     patient.systmone_queue_no = generated_ticket
+    patient.is_served = True
+    patient.is_priority = bool(is_priority)
+    patient.priority_reason = priority_reason if is_priority else None
     patient.is_blood_test = bool(is_blood_test)
     patient.lab_tests = ", ".join(test_type) if test_type else None
     patient.fasting_status = fasting if is_blood_test else None
     patient.lab_notes = lab_notes.strip() if lab_notes else None
     db.commit()
 
-    # 4. Panggilan Cetak Terma Bixolon SRP-350III (Slip Makmal / Tiket Fizikal)
-    # from services.printer import print_blood_test_ticket
-    # print_blood_test_ticket(
-    #     patient_name=patient.full_name,
-    #     ic_no=patient.ic_passport,
-    #     systmone_queue=generated_ticket,
-    #     tests_list=test_type,
-    #     fasting_status=fasting or "TIADA",
-    #     notes=lab_notes
-    # )
+    priority_badge = ""
+    if is_priority:
+        priority_badge = f'<span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded ml-2">⚡ FAST-TRACK ({priority_reason})</span>'
 
-    # 5. Maklum balas UI dan trigger HTMX
-    response_html = f"""
-    <div class="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 text-xs font-bold flex justify-between items-center shadow-sm animate-fade-in">
-        <div class="flex items-center gap-2">
-            <span class="text-base">✓</span>
-            <span>Tiket <span class="text-blue-700 underline font-black">[{generated_ticket}]</span> ({category}) berjaya diproses & dicetuskan ke SystmOne!</span>
-        </div>
-        <span class="text-[10px] text-emerald-700 font-semibold bg-emerald-100/70 px-2 py-0.5 rounded-full">Sedia ke Ruang Menunggu</span>
+    # 4. Maklum balas UI bersama HTMX Out-of-Band Swap untuk zon pesakit aktif
+    response_html = f"""<div class="p-3.5 bg-emerald-50 border-2 border-emerald-300 rounded-2xl text-emerald-950 text-xs font-bold flex justify-between items-center shadow-sm animate-fade-in mb-3">
+    <div class="flex items-center gap-2">
+        <span class="text-lg">✓</span>
+        <span>Tiket <span class="text-blue-700 underline font-black">[{generated_ticket}]</span> ({category}){priority_badge} siap diproses & dicetuskan ke SystmOne!</span>
     </div>
-    """
-    
+    <span class="text-[10px] text-emerald-700 font-semibold bg-emerald-100 px-2.5 py-1 rounded-full">Sedia Masuk</span>
+</div>
+<div id="active-patient-zone" hx-swap-oob="true">
+    <div class="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-8 text-center text-slate-400 shadow-sm animate-fade-in">
+        <span class="text-4xl block mb-2">📷</span>
+        <p class="font-extrabold text-sm text-slate-700">Sedia Menerima Imbasan Kod Bar / QR Pesakit</p>
+        <p class="text-xs text-slate-400 mt-1">Imbas kod QR pada telefon pesakit atau klik pada senarai menunggu di sebelah kanan.</p>
+    </div>
+</div>"""
+
     headers = {
         "HX-Trigger": json.dumps({
-            "refreshQueue": True,
-            "clearActivePatient": True
+            "refreshQueue": True
         })
     }
     return HTMLResponse(content=response_html, headers=headers)
 
 
 # ==========================================
-# 2. KAUNTER PENDAFTARAN UTAMA (/counter)
+# 2. KAUNTER PENDAFTARAN UTAMA & POLING SENARAI
 # ==========================================
 
 @router.get("", response_class=HTMLResponse)
@@ -238,6 +226,7 @@ def counter_dashboard(request: Request, db: Session = Depends(get_db)):
         name="staff_dashboard.html",
         context={"patients": patients}
     )
+
 
 @router.get("/queue-rows", response_class=HTMLResponse)
 def get_queue_rows(
@@ -264,21 +253,25 @@ def get_queue_rows(
         )
 
     patients = query.order_by(PatientQueue.created_at.asc()).all()
+    queue_count = len(patients)
 
-    # Periksa sama ada panggilan datang dari /counter/station
     referer = request.headers.get("referer", "")
-    if station_mode or ("station" in referer):
-        return templates.TemplateResponse(
-            request=request,
-            name="partials/station_rows.html",
-            context={"patients": patients}
-        )
+    is_station = station_mode or ("station" in referer)
+    template_name = "partials/station_rows.html" if is_station else "partials/patient_rows.html"
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
-        name="partials/patient_rows.html",
+        name=template_name,
         context={"patients": patients}
     )
+    
+    # Hantar jumlah pesakit melalui header HX-Trigger secara bersih
+    response.headers["HX-Trigger"] = json.dumps({
+        "updateQueueCount": queue_count
+    })
+    
+    return response
+
 
 @router.post("/serve/{patient_id}")
 def mark_served(patient_id: int, db: Session = Depends(get_db)):
@@ -287,6 +280,7 @@ def mark_served(patient_id: int, db: Session = Depends(get_db)):
         patient.is_served = True
         db.commit()
     return Response(content="", status_code=200)
+
 
 @router.get("/copy-field", response_class=HTMLResponse)
 def copy_field(request: Request, text: str, label: str):
@@ -306,6 +300,7 @@ def copy_field(request: Request, text: str, label: str):
         context={"label": label},
         headers=headers
     )
+
 
 @router.get("/api/get-patient/{ic_passport}")
 def api_get_patient(ic_passport: str, db: Session = Depends(get_db)):

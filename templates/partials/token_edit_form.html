@@ -1,0 +1,23 @@
+<!-- templates/partials/token_edit_form.html -->
+<form hx-post="/counter/update-token/{{ patient.id }}" 
+      hx-target="this" 
+      hx-swap="outerHTML" 
+      class="inline-flex items-center gap-1">
+    <input type="text" 
+           name="new_token" 
+           value="{{ patient.token_code }}" 
+           class="w-24 px-1.5 py-0.5 text-xs font-black uppercase border-2 border-blue-500 rounded bg-white outline-none focus:ring-1 focus:ring-blue-400"
+           autofocus 
+           onfocus="this.select()">
+    <button type="submit" 
+            class="px-2 py-0.5 bg-emerald-600 text-white text-xs font-bold rounded hover:bg-emerald-700 active:scale-95 transition">
+        ✓
+    </button>
+    <button type="button" 
+            hx-get="/counter/cancel-edit-token/{{ patient.id }}" 
+            hx-target="closest form" 
+            hx-swap="outerHTML"
+            class="px-2 py-0.5 bg-slate-200 text-slate-700 text-xs font-bold rounded hover:bg-slate-300 active:scale-95 transition">
+        ✕
+    </button>
+</form>
