@@ -39,19 +39,34 @@
                 <span class="inline-block w-2 h-2 rounded-full bg-amber-500 shrink-0" title="Ada pertukaran alamat"></span>
             {% endif %}
         </div>
+        <span class="text-[10px] text-slate-400 font-semibold block">{{ p.ic_passport }}</span>
     </td>
 
-    <!-- 4. Butang Tindakan -->
+    <!-- 4. Butang Tindakan (PILIH + BATAL) -->
     <td class="p-3 text-right whitespace-nowrap">
-        <button type="button"
-                hx-get="/counter/station/patient-card/{{ p.id }}"
-                hx-target="#active-patient-zone"
-                hx-swap="innerHTML"
-                onclick="highlightRow('station-row-{{ p.id }}')"
-                class="px-3 py-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-[11px] rounded-lg shadow-sm shadow-blue-500/20 transition inline-flex items-center gap-1">
-            <span>Pilih</span>
-            <span>➔</span>
-        </button>
+        <div class="inline-flex items-center gap-1.5 justify-end">
+            <!-- Butang Pilih Pesakit ke Panel Kiri -->
+            <button type="button"
+                    hx-get="/counter/station/patient-card/{{ p.id }}"
+                    hx-target="#active-patient-zone"
+                    hx-swap="innerHTML"
+                    onclick="highlightRow('station-row-{{ p.id }}')"
+                    class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-[11px] rounded-lg shadow-sm shadow-blue-500/20 transition inline-flex items-center gap-1">
+                <span>Pilih</span>
+                <span>➔</span>
+            </button>
+
+            <!-- Butang Batal / Gugur Baris Ini -->
+            <button type="button" 
+                    hx-post="/counter/cancel-patient/{{ p.id }}" 
+                    hx-confirm="Adakah anda pasti mahu membatalkan pesakit ini ({{ p.full_name }}) daripada senarai menunggu?"
+                    class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" 
+                    title="Batal / Gugur dari Senarai">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
     </td>
 </tr>
 {% else %}

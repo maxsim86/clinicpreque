@@ -14,7 +14,7 @@
 </head>
 <body class="bg-slate-100 min-h-screen p-4 text-slate-800">
 
-    <!-- Header Atas: Status Perkakasan & Rangkaian -->
+    <!-- Header Atas: Status Perkakasan, Cetak Semula & Rangkaian -->
     <header class="bg-white border border-slate-200/90 rounded-2xl px-6 py-3.5 shadow-sm mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div class="flex items-center gap-3">
             <span class="bg-blue-600 text-white text-xs font-black px-2.5 py-1 rounded-lg tracking-wider shadow-sm shadow-blue-500/20">KK PANDAMARAN</span>
@@ -23,10 +23,21 @@
                 <p class="text-[11px] text-slate-400 font-bold">Pintu Masuk & Unit Saringan Awal</p>
             </div>
         </div>
+        
         <div class="flex items-center gap-3 text-xs font-bold">
+            <!-- Butang Cetak Semula Terakhir (Reprint) -->
+            <button type="button" 
+                    hx-post="/counter/reprint-last"
+                    hx-target="#toast-container"
+                    hx-swap="innerHTML"
+                    class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white px-3 py-1.5 rounded-full transition shadow-xs">
+                <span>🔄</span>
+                <span>Cetak Semula Terakhir</span>
+            </button>
+
             <div class="flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200/70 px-3 py-1.5 rounded-full">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Bixolon SRP-350III Sedia</span>
+                <span>Bixolon Sedia</span>
             </div>
             <div class="flex items-center gap-2 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full">
                 <span class="w-2 h-2 rounded-full bg-blue-500"></span>
@@ -34,6 +45,9 @@
             </div>
         </div>
     </header>
+
+    <!-- Bekas Toast Notifikasi -->
+    <div id="toast-container"></div>
 
     <!-- Grid Susunan 2 Kolum -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -119,17 +133,45 @@
 
                     <!-- Pilihan Ujian Darah -->
                     <div id="blood-test-options" class="hidden space-y-2.5 pt-2 border-t border-blue-200/60">
+                        <!-- Status Puasa -->
                         <div class="flex gap-2">
                             <label class="flex-1 text-center py-2 border-2 border-slate-200 rounded-xl bg-white text-xs font-bold text-slate-700 cursor-pointer has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-900 transition">
-                                <input type="radio" name="fasting" value="PUASA" class="hidden" checked> 🍽️ Berpuasa
+                                <input type="radio" id="fasting-puasa" name="fasting" value="PUASA" class="hidden" checked> 🍽️ Berpuasa
                             </label>
                             <label class="flex-1 text-center py-2 border-2 border-slate-200 rounded-xl bg-white text-xs font-bold text-slate-700 cursor-pointer has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:text-amber-900 transition">
-                                <input type="radio" name="fasting" value="TIDAK_PUASA" class="hidden"> ☕ Tidak Puasa / Rawak
+                                <input type="radio" id="fasting-tak-puasa" name="fasting" value="TIDAK_PUASA" class="hidden"> ☕ Tidak Puasa / Rawak
                             </label>
                         </div>
 
+                        <!-- Butang Pakej Pantas (Presets) -->
+                        <div class="pt-1">
+                            <span class="text-[10px] font-black text-blue-800 uppercase tracking-wider block mb-1.5">⚡ Pakej Pantas Makmal:</span>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <button type="button" 
+                                        onclick="applyBloodPreset('DM')" 
+                                        class="px-2 py-1.5 bg-blue-100/80 hover:bg-blue-600 hover:text-white border border-blue-300 rounded-xl text-[11px] font-bold text-blue-900 transition text-center shadow-xs">
+                                    🧪 DM Panel
+                                </button>
+                                <button type="button" 
+                                        onclick="applyBloodPreset('NCD')" 
+                                        class="px-2 py-1.5 bg-blue-100/80 hover:bg-blue-600 hover:text-white border border-blue-300 rounded-xl text-[11px] font-bold text-blue-900 transition text-center shadow-xs">
+                                    🩺 Rutin NCD
+                                </button>
+                                <button type="button" 
+                                        onclick="applyBloodPreset('MCH')" 
+                                        class="px-2 py-1.5 bg-pink-100/80 hover:bg-pink-600 hover:text-white border border-pink-300 rounded-xl text-[11px] font-bold text-pink-900 transition text-center shadow-xs">
+                                    🤰 Ibu Hamil
+                                </button>
+                                <button type="button" 
+                                        onclick="applyBloodPreset('CLEAR')" 
+                                        class="px-2 py-1.5 bg-slate-100 hover:bg-slate-300 border border-slate-300 rounded-xl text-[11px] font-bold text-slate-600 transition text-center shadow-xs">
+                                    ✕ Kosongkan
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Senarai Ujian Darah -->
-                        <div class="grid grid-cols-3 gap-2 text-xs font-bold text-slate-700">
+                        <div class="grid grid-cols-3 gap-2 text-xs font-bold text-slate-700 pt-1">
                             <label class="bg-white border-2 border-slate-200 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:text-blue-900 transition">
                                 <input type="checkbox" name="test_type" value="FBS" class="rounded text-blue-600 focus:ring-0"> FBS (Gula)
                             </label>
@@ -151,7 +193,10 @@
                         </div>
 
                         <!-- Nota Ringkas -->
-                        <input type="text" name="lab_notes" placeholder="Catatan tambahan makmal (cth: Temujanji NCD, Ibu Hamil)..." 
+                        <input type="text" 
+                               id="lab-notes-input" 
+                               name="lab_notes" 
+                               placeholder="Catatan tambahan makmal (cth: Temujanji NCD, Ibu Hamil)..." 
                                class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold uppercase outline-none focus:border-blue-500 transition">
                     </div>
                 </div>
@@ -220,23 +265,37 @@
                         {{ patients|length }}
                     </span>
                 </div>
-                <span class="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full border border-slate-200">Live HTMX (3s)</span>
+                <span class="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full border border-slate-200">Live (3s)</span>
             </div>
 
+            <!-- Kotak Carian Pantas -->
             <div class="relative mb-3.5">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                 </div>
+                
                 <input type="text" 
                        id="search-input" 
                        name="search" 
-                       placeholder="Imbas Kod Bar / Taip No. KP, Nama, Token..."
+                       placeholder="Carian: 4 Digit Akhir IC /  Nama / Imbas Barcode..."
                        hx-get="/counter/queue-rows"
-                       hx-trigger="keyup changed delay:250ms, search"
+                       hx-trigger="keyup changed delay:200ms, search"
                        hx-target="#queue-table-body"
-                       class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold uppercase outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition shadow-inner">
+                       autocomplete="off"
+                       class="w-full pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold uppercase outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition shadow-inner placeholder:normal-case placeholder:font-medium placeholder:text-slate-400">
+
+                <!-- Butang Padam Segera -->
+                <button type="button" 
+                        id="clear-search-btn"
+                        onclick="clearSearchInput()"
+                        class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition"
+                        title="Kosongkan carian">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             </div>
 
             <div class="overflow-y-auto flex-1 border border-slate-200/80 rounded-2xl">
@@ -264,10 +323,32 @@
 
     </div>
 
-    <!-- Logik Pengendali JS Ringkas -->
+    <!-- Logik Pengendali JS -->
     <script>
         const searchInput = document.getElementById('search-input');
+        const clearBtn = document.getElementById('clear-search-btn');
 
+        // Togol butang padam input carian
+        searchInput.addEventListener('input', function() {
+            if (this.value.trim().length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+        });
+
+        // Kosongkan carian
+        function clearSearchInput() {
+            searchInput.value = '';
+            clearBtn.classList.add('hidden');
+            htmx.ajax('GET', '/counter/queue-rows', {
+                target: '#queue-table-body',
+                swap: 'innerHTML'
+            });
+            searchInput.focus();
+        }
+
+        // Imbasan Barcode dengan kekunci Enter
         searchInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -280,9 +361,72 @@
                 });
 
                 this.value = '';
+                clearBtn.classList.add('hidden');
             }
         });
 
+        // Pengendali kiraan senarai & Auto-Select pesakit jika hasil carian tepat 1 orang
+        document.body.addEventListener('updateQueueCount', function(evt) {
+            const badge = document.getElementById('queue-count-badge');
+            if (!badge) return;
+
+            let count = 0;
+            if (typeof evt.detail === 'object' && evt.detail !== null) {
+                count = evt.detail.value !== undefined ? evt.detail.value : 0;
+
+                // Auto-select kad pesakit ke panel kiri jika carian ada 1 padanan tepat
+                if (evt.detail.autoSelectPatientId && searchInput.value.trim() !== '') {
+                    htmx.ajax('GET', `/counter/station/patient-card/${evt.detail.autoSelectPatientId}`, {
+                        target: '#active-patient-zone',
+                        swap: 'innerHTML'
+                    });
+                    highlightRow(`station-row-${evt.detail.autoSelectPatientId}`);
+                }
+            } else {
+                count = evt.detail;
+            }
+
+            badge.textContent = count;
+        });
+
+        // Pakej Pantas Ujian Makmal (Presets)
+        function applyBloodPreset(presetType) {
+            const checkboxes = document.querySelectorAll('input[name="test_type"]');
+            const fastingPuasa = document.getElementById('fasting-puasa');
+            const fastingTakPuasa = document.getElementById('fasting-tak-puasa');
+            const notesInput = document.getElementById('lab-notes-input');
+
+            checkboxes.forEach(cb => cb.checked = false);
+
+            if (presetType === 'DM') {
+                ['FBS', 'HBA1C', 'RP'].forEach(val => {
+                    const el = document.querySelector(`input[name="test_type"][value="${val}"]`);
+                    if (el) el.checked = true;
+                });
+                if (fastingPuasa) fastingPuasa.checked = true;
+                if (notesInput) notesInput.value = "PAKEJ DIABETIK (DM)";
+
+            } else if (presetType === 'NCD') {
+                ['LIPID', 'RP', 'FBS'].forEach(val => {
+                    const el = document.querySelector(`input[name="test_type"][value="${val}"]`);
+                    if (el) el.checked = true;
+                });
+                if (fastingPuasa) fastingPuasa.checked = true;
+                if (notesInput) notesInput.value = "RUTIN NCD (HIPERTENSI / KOLESTROL)";
+
+            } else if (presetType === 'MCH') {
+                const el = document.querySelector('input[name="test_type"][value="FBC"]');
+                if (el) el.checked = true;
+                if (fastingTakPuasa) fastingTakPuasa.checked = true;
+                if (notesInput) notesInput.value = "SARINGAN IBU MCH";
+
+            } else if (presetType === 'CLEAR') {
+                if (notesInput) notesInput.value = "";
+                if (fastingPuasa) fastingPuasa.checked = true;
+            }
+        }
+
+        // Serlahkan baris aktif
         function highlightRow(rowId) {
             document.querySelectorAll('#queue-table-body tr').forEach(r => {
                 r.classList.remove('bg-blue-50', 'border-l-4', 'border-l-blue-600');
@@ -294,6 +438,7 @@
             }
         }
 
+        // Togol Keutamaan
         function togglePriorityOptions(show) {
             const options = document.getElementById('priority-options');
             if (show) {
@@ -303,6 +448,7 @@
             }
         }
 
+        // Togol Panel Darah
         function toggleBloodPanel(show) {
             const panel = document.getElementById('blood-test-options');
             if (show) {
@@ -312,20 +458,37 @@
             }
         }
 
+        // Tetapkan Kategori Tiket
         function setCategoryAndPrefix(category, prefix) {
             document.getElementById('selected-category').value = category;
             document.getElementById('selected-prefix').value = prefix;
         }
 
-        // Kemas kini angka badge (6) secara automatik setiap kali poling berjalan tanpa merosakkan tbody
-document.body.addEventListener('updateQueueCount', function(evt) {
-    const badge = document.getElementById('queue-count-badge');
-    if (badge && evt.detail !== undefined) {
-        badge.textContent = evt.detail;
-    }
-});
+        // Kosongkan kad apabila event clearActivePatient diterima
+        document.body.addEventListener('clearActivePatient', function() {
+            const activeZone = document.getElementById('active-patient-zone');
+            if (activeZone) {
+                activeZone.innerHTML = `
+                    <div class="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-8 text-center text-slate-400 shadow-sm animate-fade-in">
+                        <span class="text-4xl block mb-2">📷</span>
+                        <p class="font-extrabold text-sm text-slate-700">Sedia Menerima Imbasan Kod Bar / QR Pesakit</p>
+                        <p class="text-xs text-slate-400 mt-1">Imbas kod QR pada telefon pesakit atau klik pada senarai menunggu di sebelah kanan.</p>
+                    </div>
+                `;
+            }
+            const priorityCheckbox = document.getElementById('check-priority');
+            if (priorityCheckbox) {
+                priorityCheckbox.checked = false;
+                togglePriorityOptions(false);
+            }
+            const bloodCheckbox = document.getElementById('check-blood-test');
+            if (bloodCheckbox) {
+                bloodCheckbox.checked = false;
+                toggleBloodPanel(false);
+            }
+        });
 
-        // Pengimbas fizikal barcode sentiasa fokus ke kotak carian
+        // Pengimbas fizikal sentiasa fokus ke input carian
         document.addEventListener('keydown', function(e) {
             const searchBox = document.getElementById('search-input');
             if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
