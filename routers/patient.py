@@ -81,34 +81,37 @@ async def submit_patient(
     visit_purpose: str = Form("SAKIT_BIASA"),
     address_status: str = Form("KEKAL"),
     address: str = Form("KEKAL SEPERTI REKOD SEDIA ADA"),
-    db: Session = Depends(get_db),
+    doc_type: str = Form("MYKAD"), # Menerima jenis dokumen
+    db: Session = Depends(get_db)
 ):
+    # Buang sengkang jika MyKad, atau kekalkan alfanumerik huruf besar jika pasport
+    clean_id = ic_passport.strip().upper().replace("-", "")
+
     token = generate_purpose_token(visit_purpose, db)
     final_address = (
-        address.strip().upper()
-        if address_status == "DIKEMASKINI"
+        address.strip().upper() 
+        if address_status == "DIKEMASKINI" 
         else "KEKAL SEPERTI REKOD SEDIA ADA"
     )
 
     record = PatientQueue(
-        ic_passport=ic_passport.strip().upper(),
+        ic_passport=clean_id,
         full_name=full_name.strip().upper(),
         phone_number=phone_number.strip(),
         visit_purpose=visit_purpose,
         address_status=address_status,
         address=final_address,
         token_code=token,
-        is_served=False,
+        is_served=False
     )
     db.add(record)
     db.commit()
     db.refresh(record)
 
-    # WAJIB: Siarkan isyarat SSE kepada semua skrin kaunter & station serta-merta
     background_tasks.add_task(sse_manager.broadcast_refresh)
 
     return templates.TemplateResponse(
         request=request,
         name="partials/success_token.html",
-        context={"token": token, "patient": record},
+        context={"token": token, "patient": record}
     )

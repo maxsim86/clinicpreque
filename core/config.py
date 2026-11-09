@@ -20,7 +20,7 @@ TRANSLATIONS = {
         "addr_change": "Tukar Alamat",
         "addr_change_desc": "Pindah rumah / alamat baharu.",
         "submit_btn": "Hantar Maklumat",
-        "elderly_mode": "Mod Warga Emas (Tulisan Besar)"
+        "elderly_mode": "Mod Warga Emas"
     },
     "en": {
         "title": "KK Pandamaran Pre-Queue Registration",
@@ -43,6 +43,6 @@ TRANSLATIONS = {
         "addr_change": "Change Address",
         "addr_change_desc": "Relocated / new residential address.",
         "submit_btn": "Submit Details",
-        "elderly_mode": "Senior Citizen Mode (Large Text)"
+        "elderly_mode": "Senior Citizen Mode"
     }
 }

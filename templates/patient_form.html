@@ -101,6 +101,84 @@
     </div>
 
     <script>
+
+        let currentDocType = 'mykad';
+
+function setDocType(type) {
+    currentDocType = type;
+    const input = document.getElementById('ic_passport_input');
+    const label = document.getElementById('doc-label');
+    const helper = document.getElementById('doc-helper');
+    const icon = document.getElementById('doc-icon');
+    const docTypeHidden = document.getElementById('doc_type');
+    const btnMyKad = document.getElementById('btn-type-mykad');
+    const btnPassport = document.getElementById('btn-type-passport');
+
+    input.value = ''; // Kosongkan input bila bertukar mod
+
+    if (type === 'passport') {
+        docTypeHidden.value = 'PASSPORT';
+        label.innerText = 'No. Pasport / Dokumen Perjalanan';
+        input.placeholder = 'Cth: A12345678 / P1234567';
+        input.inputMode = 'text'; // Paparkan abjad pada telefon
+        input.removeAttribute('pattern');
+        input.maxLength = 20;
+        helper.innerText = 'Masukkan nombor pasport penuh berserta huruf.';
+        icon.innerText = '🛂';
+
+        // Gaya Butang Pasport Aktif
+        btnPassport.className = 'px-2 py-0.5 text-[10px] font-black rounded-md bg-white text-blue-700 shadow-xs transition';
+        btnMyKad.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md text-slate-500 hover:text-slate-800 transition';
+    } else {
+        docTypeHidden.value = 'MYKAD';
+        label.innerText = 'No. Kad Pengenalan';
+        input.placeholder = 'Cth: 860118-08-6111';
+        input.inputMode = 'numeric'; // Papan kekunci angka di telefon
+        input.setAttribute('pattern', '[0-9\\-]*');
+        input.maxLength = 14;
+        helper.innerText = 'Masukkan 12 digit nombor MyKad tanpa sengkang.';
+        icon.innerText = '🪪';
+
+        // Gaya Butang MyKad Aktif
+        btnMyKad.className = 'px-2 py-0.5 text-[10px] font-black rounded-md bg-white text-blue-700 shadow-xs transition';
+        btnPassport.className = 'px-2 py-0.5 text-[10px] font-bold rounded-md text-slate-500 hover:text-slate-800 transition';
+    }
+    input.focus();
+}
+
+function handleDocInput(input) {
+    if (currentDocType === 'mykad') {
+        // Format automatik sengkang untuk MyKad warganegara (cth: 900101-10-5555)
+        let val = input.value.replace(/\D/g, '');
+        if (val.length > 6 && val.length <= 8) {
+            input.value = val.slice(0, 6) + '-' + val.slice(6);
+        } else if (val.length > 8) {
+            input.value = val.slice(0, 6) + '-' + val.slice(6, 8) + '-' + val.slice(8, 12);
+        } else {
+            input.value = val;
+        }
+
+        // Auto-detect warga emas jika lahir sebelum tahun tertentu
+        if (val.length >= 2) {
+            const birthYearPrefix = parseInt(val.substring(0, 2), 10);
+            const currentYear = new Date().getFullYear();
+            const birthYear = birthYearPrefix > (currentYear % 100) ? (1900 + birthYearPrefix) : (2000 + birthYearPrefix);
+            const age = currentYear - birthYear;
+            
+            // Buka mod warga emas secara visual jika pesakit 60 tahun ke atas
+            const container = document.getElementById('form-container');
+            if (age >= 60 && container && !container.classList.contains('elderly-mode')) {
+                container.classList.add('elderly-mode');
+            }
+        }
+    } else {
+        // Untuk pasport: benarkan huruf dan nombor, tukar automatik ke huruf besar (Uppercase)
+        input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }
+}
+
+
+
         // Jalankan semakan bila halaman dibuka & selepas HTMX swap
         document.addEventListener("DOMContentLoaded", initAddressField);
         document.body.addEventListener('htmx:afterSwap', initAddressField);

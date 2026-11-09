@@ -47,23 +47,64 @@
           hx-swap="innerHTML"
           class="space-y-4">
         
-        <!-- 1. No. KP Input -->
-        <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{{ t.ic_label }}</label>
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <svg width="16" height="16" style="width:16px; height:16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
-                    </svg>
-                </div>
-                <input type="text" name="ic_passport" required placeholder="Cth: 860118-08-6111" maxlength="14"
-                       hx-get="/check-ic" hx-trigger="keyup changed delay:500ms" hx-target="#returning-patient-zone"
-                       class="w-full pl-10 pr-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm font-semibold tracking-wider uppercase focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition"
-                       oninput="formatIC(this)">
-            </div>
-            <!-- Bekas sasaran returning-patient-zone -->
-            <div id="returning-patient-zone"></div>
+        <!-- 1. No. KP / Pasport Input Bersama Togol Jenis Dokumen -->
+<div>
+    <div class="flex justify-between items-center mb-1.5">
+        <label id="doc-label" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+            No. Kad Pengenalan
+        </label>
+        
+        <!-- Togol Pantas MyKad vs Pasport -->
+        <div class="inline-flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+            <button type="button" 
+                    id="btn-type-mykad" 
+                    onclick="setDocType('mykad')"
+                    class="px-2 py-0.5 text-[10px] font-black rounded-md bg-white text-blue-700 shadow-xs transition">
+                🇲🇾 MyKad
+            </button>
+            <button type="button" 
+                    id="btn-type-passport" 
+                    onclick="setDocType('passport')"
+                    class="px-2 py-0.5 text-[10px] font-bold rounded-md text-slate-500 hover:text-slate-800 transition">
+                🌐 Pasport
+            </button>
         </div>
+    </div>
+
+    <!-- Input Tersembunyi Jenis Dokumen (Untuk rujukan backend) -->
+    <input type="hidden" name="doc_type" id="doc_type" value="MYKAD">
+
+    <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <!-- Ikon Dokumen Dinamik -->
+            <span id="doc-icon" class="text-sm">🪪</span>
+        </div>
+        
+        <!-- Input Dokumen Pintar -->
+        <input type="text" 
+               id="ic_passport_input"
+               name="ic_passport" 
+               required 
+               placeholder="Cth: 222558-02-1111" 
+               maxlength="14"
+               inputmode="numeric"
+               pattern="[0-9\-]*"
+               autocomplete="off"
+               hx-get="/check-ic" 
+               hx-trigger="keyup changed delay:500ms" 
+               hx-target="#returning-patient-zone"
+               class="w-full pl-10 pr-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm font-semibold tracking-wider uppercase focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition"
+               oninput="handleDocInput(this)">
+    </div>
+    
+    <!-- Mesej Bantuan Format -->
+    <p id="doc-helper" class="text-[10px] text-slate-400 font-semibold mt-1">
+        Masukkan 12 digit nombor MyKad tanpa sengkang.
+    </p>
+
+    <!-- Bekas Rekod Pesakit Berulang -->
+    <div id="returning-patient-zone"></div>
+</div>
 
         <!-- 2. Nama Penuh Input -->
         <div>
@@ -89,7 +130,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                     </svg>
                 </div>
-                <input type="tel" name="phone_number" required placeholder="Cth: 016-6148041"
+                <input type="tel" name="phone_number" required placeholder="Cth: 011-1122233"
                        class="w-full pl-10 pr-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm font-semibold focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition">
             </div>
         </div>

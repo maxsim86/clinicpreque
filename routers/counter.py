@@ -166,7 +166,6 @@ async def cancel_patient_queue(
 def reprint_last_ticket(
     background_tasks: BackgroundTasks, db: Session = Depends(get_db)
 ):
-    """Cetak semula tiket bagi pesakit terakhir yang diproses"""
     last_patient = (
         db.query(PatientQueue)
         .filter(
