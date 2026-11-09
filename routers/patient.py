@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Form, Depends
+from fastapi import APIRouter, Request, Form, Depends, BackgroundTasks
 from fastapi.responses import HTMLResponse, StreamingResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -8,6 +8,7 @@ from core.config import TRANSLATIONS
 from models.queue import PatientQueue
 from services.qr import generate_purpose_token, create_qr_buffer
 from services.postcode import check_pandamaran_zone
+from services.sse_manager import sse_manager
 
 router = APIRouter(tags=["Patient"])
 templates = Jinja2Templates(directory="templates")
@@ -69,8 +70,9 @@ def check_returning_patient(request: Request, ic_passport: str = "", db: Session
 
 
 @router.post("/submit-patient", response_class=HTMLResponse)
-def submit_patient(
+async def submit_patient(
     request: Request,
+    background_tasks: BackgroundTasks,
     ic_passport: str = Form(...),
     full_name: str = Form(...),
     phone_number: str = Form(...),
@@ -93,11 +95,15 @@ def submit_patient(
         visit_purpose=visit_purpose,
         address_status=address_status,
         address=final_address,
-        token_code=token
+        token_code=token,
+        is_served=False
     )
     db.add(record)
     db.commit()
     db.refresh(record)
+
+    # WAJIB: Siarkan isyarat SSE kepada semua skrin kaunter & station serta-merta
+    background_tasks.add_task(sse_manager.broadcast_refresh)
 
     return templates.TemplateResponse(
         request=request,
