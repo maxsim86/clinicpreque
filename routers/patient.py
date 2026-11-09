@@ -21,7 +21,7 @@ def get_patient_form(request: Request, lang: str = "bm", elderly: str = "false")
     return templates.TemplateResponse(
         request=request,
         name="patient_form.html",
-        context={"t": texts, "lang": lang, "elderly": is_elderly}
+        context={"t": texts, "lang": lang, "elderly": is_elderly},
     )
 
 
@@ -32,7 +32,7 @@ def get_form_content(request: Request, lang: str = "bm", elderly: str = "false")
     return templates.TemplateResponse(
         request=request,
         name="partials/form_content.html",
-        context={"t": texts, "lang": lang, "elderly": is_elderly}
+        context={"t": texts, "lang": lang, "elderly": is_elderly},
     )
 
 
@@ -48,7 +48,9 @@ def get_qr_image(token_code: str):
 
 
 @router.get("/check-ic", response_class=HTMLResponse)
-def check_returning_patient(request: Request, ic_passport: str = "", db: Session = Depends(get_db)):
+def check_returning_patient(
+    request: Request, ic_passport: str = "", db: Session = Depends(get_db)
+):
     clean_ic = ic_passport.strip().upper()
     if len(clean_ic) < 8:
         return Response(content="", status_code=200)
@@ -64,7 +66,7 @@ def check_returning_patient(request: Request, ic_passport: str = "", db: Session
         return templates.TemplateResponse(
             request=request,
             name="partials/returning_patient.html",
-            context={"patient": patient}
+            context={"patient": patient},
         )
     return Response(content="", status_code=200)
 
@@ -79,12 +81,12 @@ async def submit_patient(
     visit_purpose: str = Form("SAKIT_BIASA"),
     address_status: str = Form("KEKAL"),
     address: str = Form("KEKAL SEPERTI REKOD SEDIA ADA"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     token = generate_purpose_token(visit_purpose, db)
     final_address = (
-        address.strip().upper() 
-        if address_status == "DIKEMASKINI" 
+        address.strip().upper()
+        if address_status == "DIKEMASKINI"
         else "KEKAL SEPERTI REKOD SEDIA ADA"
     )
 
@@ -96,7 +98,7 @@ async def submit_patient(
         address_status=address_status,
         address=final_address,
         token_code=token,
-        is_served=False
+        is_served=False,
     )
     db.add(record)
     db.commit()
@@ -108,5 +110,5 @@ async def submit_patient(
     return templates.TemplateResponse(
         request=request,
         name="partials/success_token.html",
-        context={"token": token, "patient": record}
+        context={"token": token, "patient": record},
     )

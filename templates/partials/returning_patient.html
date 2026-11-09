@@ -1,0 +1,33 @@
+<!-- templates/partials/returning_patient.html -->
+<div class="p-3.5 bg-blue-50 border border-blue-200 rounded-2xl animate-fade-in space-y-2 mb-3">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <span class="text-base">👤</span>
+            <span class="text-xs font-black text-blue-950 uppercase tracking-tight">Rekod Pesakit Ditemui</span>
+        </div>
+        <span class="text-[10px] bg-blue-200/80 text-blue-900 font-extrabold px-2 py-0.5 rounded-full">Sedia Ada</span>
+    </div>
+
+    <p class="text-xs text-slate-700 font-bold leading-relaxed">
+        Selamat kembali, <span class="text-blue-700 font-black">{{ patient.full_name }}</span>.
+    </p>
+
+    <!-- Skrip untuk mengisi semula borang secara automatik (Auto-fill) -->
+    <script>
+        (function() {
+            const nameInput = document.querySelector('input[name="full_name"]');
+            const phoneInput = document.querySelector('input[name="phone_number"]');
+            const addressInput = document.querySelector('textarea[name="address"], input[name="address"]');
+
+            if (nameInput && !nameInput.value) {
+                nameInput.value = "{{ patient.full_name }}";
+            }
+            if (phoneInput && !phoneInput.value && "{{ patient.phone_number }}" !== "-") {
+                phoneInput.value = "{{ patient.phone_number }}";
+            }
+            if (addressInput && !addressInput.value && "{{ patient.address }}" !== "-") {
+                addressInput.value = "{{ patient.address }}";
+            }
+        })();
+    </script>
+</div>

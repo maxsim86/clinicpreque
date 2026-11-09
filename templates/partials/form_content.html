@@ -3,29 +3,29 @@
     
     <!-- Top Action Bar -->
     <div class="flex justify-between items-center pb-4 mb-6 border-b border-slate-100">
-        <!-- Butang Mod Warga Emas -->
+        <!-- Butang Mod Warga Emas (Menyasarkan #main-container secara selamat) -->
         <button type="button" 
                 hx-get="/get-form-content?lang={{ lang }}&elderly={% if elderly %}false{% else %}true{% endif %}"
-                hx-target="#form-container"
-                hx-swap="outerHTML"
+                hx-target="#main-container"
+                hx-swap="innerHTML"
                 class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border
                        {% if elderly %}bg-amber-500 text-white border-amber-600 shadow-md ring-2 ring-amber-300{% else %}bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100{% endif %}">
             <span>👓 {{ t.elderly_mode }}</span>
         </button>
 
-        <!-- Butang Bahasa -->
+        <!-- Butang Bahasa (Menyasarkan #main-container secara selamat) -->
         <div class="flex items-center bg-slate-100 p-1 rounded-xl">
             <button type="button" 
                     hx-get="/get-form-content?lang=bm&elderly={% if elderly %}true{% else %}false{% endif %}"
-                    hx-target="#form-container"
-                    hx-swap="outerHTML"
+                    hx-target="#main-container"
+                    hx-swap="innerHTML"
                     class="px-3 py-1 rounded-lg text-xs font-black transition-all {% if lang == 'bm' %}bg-white text-blue-700 shadow-sm{% else %}text-slate-500 hover:text-slate-900{% endif %}">
                 BM
             </button>
             <button type="button" 
                     hx-get="/get-form-content?lang=en&elderly={% if elderly %}true{% else %}false{% endif %}"
-                    hx-target="#form-container"
-                    hx-swap="outerHTML"
+                    hx-target="#main-container"
+                    hx-swap="innerHTML"
                     class="px-3 py-1 rounded-lg text-xs font-black transition-all {% if lang == 'en' %}bg-white text-blue-700 shadow-sm{% else %}text-slate-500 hover:text-slate-900{% endif %}">
                 EN
             </button>
@@ -42,7 +42,10 @@
     </div>
 
     <!-- Borang Pendaftaran -->
-    <form hx-post="/submit-patient" hx-target="#form-container" hx-swap="outerHTML" class="space-y-4">
+    <form hx-post="/submit-patient" 
+          hx-target="#main-container" 
+          hx-swap="innerHTML"
+          class="space-y-4">
         
         <!-- 1. No. KP Input -->
         <div>
@@ -58,6 +61,7 @@
                        class="w-full pl-10 pr-4 py-3 bg-slate-50/80 border border-slate-200 rounded-xl text-sm font-semibold tracking-wider uppercase focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition"
                        oninput="formatIC(this)">
             </div>
+            <!-- Bekas sasaran returning-patient-zone -->
             <div id="returning-patient-zone"></div>
         </div>
 
@@ -131,7 +135,6 @@
             <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">{{ t.addr_title }}</label>
             
             <div class="grid grid-cols-2 gap-2.5 mb-2.5">
-                <!-- 1. Pilihan KEKAL (Laluan Default) -->
                 <label id="card-same" class="flex flex-col p-3 rounded-2xl border-2 border-blue-600 bg-blue-50/60 cursor-pointer transition">
                     <div class="flex items-center gap-2 mb-1">
                         <input type="radio" name="address_status" value="KEKAL" checked onchange="toggleAddressInput('KEKAL')" class="text-blue-600 focus:ring-0">
@@ -140,7 +143,6 @@
                     <span class="text-[10px] text-slate-500 leading-tight pl-5">{{ t.addr_same_desc }}</span>
                 </label>
 
-                <!-- 2. Pilihan TUKAR ALAMAT -->
                 <label id="card-change" class="flex flex-col p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 cursor-pointer transition">
                     <div class="flex items-center gap-2 mb-1">
                         <input type="radio" name="address_status" value="DIKEMASKINI" onchange="toggleAddressInput('DIKEMASKINI')" class="text-blue-600 focus:ring-0">
@@ -150,7 +152,7 @@
                 </label>
             </div>
 
-            <!-- Notis Hijau: Hanya muncul bila KEKAL dipilih -->
+            <!-- Notis Hijau -->
             <div id="same-address-note" style="display: flex;" class="p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-800 text-xs font-semibold items-center gap-2">
                 <svg width="18" height="18" style="width:18px; height:18px;" class="text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
@@ -158,7 +160,7 @@
                 <span>Alamat sedia ada dalam sistem klinik akan terus digunapakai.</span>
             </div>
 
-            <!-- Borang Masuk Alamat Baharu: Tersembunyi secara lalai -->
+            <!-- Borang Masuk Alamat Baharu -->
             <div id="new-address-container" style="display: none;" class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 mt-2">
                 <div>
                     <label class="block text-[11px] font-bold text-slate-600 mb-1">Poskod Kawasan (5 Digit)</label>
@@ -188,7 +190,7 @@
             </div>
         </div>
 
-        <!-- 6. Butang Hantar Borang (DIPULIHKAN SEMULA) -->
+        <!-- 6. Butang Hantar Borang -->
         <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-base font-extrabold rounded-2xl shadow-lg shadow-blue-600/25 transition-all mt-4">
             {{ t.submit_btn }}
         </button>

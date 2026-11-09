@@ -25,26 +25,27 @@ def get_next_token(db: Session) -> str:
     """Menjana nombor token harian ringkas (cth: A0001)"""
     kl_tz = ZoneInfo("Asia/Kuala_Lumpur")
     today_start = datetime.now(kl_tz).replace(hour=0, minute=0, second=0, microsecond=0)
-    
+
     last_patient = (
         db.query(PatientQueue)
         .filter(PatientQueue.created_at >= today_start)
         .order_by(PatientQueue.id.desc())
         .first()
     )
-    
+
     next_num = 1
     if last_patient and last_patient.token_code:
-        digits = re.sub(r'[^0-9]', '', last_patient.token_code)
+        digits = re.sub(r"[^0-9]", "", last_patient.token_code)
         if digits:
             next_num = int(digits) + 1
-            
+
     return f"A{next_num:04d}"
 
 
 # ==========================================
 # 0. PENDAFTARAN WALK-IN & EDIT TOKEN
 # ==========================================
+
 
 @router.post("/station/quick-walkin", response_class=HTMLResponse)
 async def quick_walkin_register(
@@ -54,7 +55,7 @@ async def quick_walkin_register(
     ic_passport: str = Form(...),
     phone_number: Optional[str] = Form("-"),
     address: Optional[str] = Form("-"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     clean_ic = ic_passport.strip().upper().replace("-", "")
     token = get_next_token(db)
@@ -67,7 +68,7 @@ async def quick_walkin_register(
         address_status="KEKAL",
         token_code=token,
         visit_purpose="OPD",
-        is_served=False
+        is_served=False,
     )
     db.add(new_patient)
     db.commit()
@@ -79,39 +80,43 @@ async def quick_walkin_register(
     card_html = templates.TemplateResponse(
         request=request,
         name="partials/active_patient_card.html",
-        context={"p": new_patient, "patient": new_patient}
+        context={"p": new_patient, "patient": new_patient},
     ).body.decode("utf-8")
 
     # PASTIKAN ada "refreshQueue": True supaya stesen ini terus kemas kini senarai
     headers = {
-        "HX-Trigger": json.dumps({
-            "refreshQueue": True,
-            "playAudioSuccess": True,
-            "closeWalkInModal": True
-        })
+        "HX-Trigger": json.dumps(
+            {"refreshQueue": True, "playAudioSuccess": True, "closeWalkInModal": True}
+        )
     }
     return HTMLResponse(content=card_html, headers=headers)
 
+
 @router.get("/edit-token/{patient_id}", response_class=HTMLResponse)
-def get_edit_token_form(request: Request, patient_id: int, db: Session = Depends(get_db)):
+def get_edit_token_form(
+    request: Request, patient_id: int, db: Session = Depends(get_db)
+):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if not patient:
-        return HTMLResponse("<span class='text-xs text-rose-500 font-bold'>Tiada</span>", status_code=404)
-        
+        return HTMLResponse(
+            "<span class='text-xs text-rose-500 font-bold'>Tiada</span>",
+            status_code=404,
+        )
+
     return templates.TemplateResponse(
         request=request,
         name="partials/token_edit_form.html",
-        context={"patient": patient}
+        context={"patient": patient},
     )
 
 
 @router.post("/update-token/{patient_id}", response_class=HTMLResponse)
 async def update_patient_token(
-    request: Request, 
+    request: Request,
     background_tasks: BackgroundTasks,
-    patient_id: int, 
-    new_token: str = Form(...), 
-    db: Session = Depends(get_db)
+    patient_id: int,
+    new_token: str = Form(...),
+    db: Session = Depends(get_db),
 ):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if patient:
@@ -122,9 +127,7 @@ async def update_patient_token(
         background_tasks.add_task(sse_manager.broadcast_refresh)
 
     return templates.TemplateResponse(
-        request=request,
-        name="partials/token_badge.html",
-        context={"patient": patient}
+        request=request, name="partials/token_badge.html", context={"patient": patient}
     )
 
 
@@ -133,11 +136,9 @@ def cancel_edit_token(request: Request, patient_id: int, db: Session = Depends(g
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if not patient:
         return HTMLResponse("", status_code=404)
-        
+
     return templates.TemplateResponse(
-        request=request,
-        name="partials/token_badge.html",
-        context={"patient": patient}
+        request=request, name="partials/token_badge.html", context={"patient": patient}
     )
 
 
@@ -145,8 +146,11 @@ def cancel_edit_token(request: Request, patient_id: int, db: Session = Depends(g
 # 1. PENGURUSAN PESAKIT & CETAK SEMULA
 # ==========================================
 
+
 @router.post("/cancel-patient/{patient_id}")
-async def cancel_patient_queue(patient_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def cancel_patient_queue(
+    patient_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if patient:
         patient.is_served = True
@@ -159,14 +163,16 @@ async def cancel_patient_queue(patient_id: int, background_tasks: BackgroundTask
 
 
 @router.post("/reprint-last", response_class=HTMLResponse)
-def reprint_last_ticket(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def reprint_last_ticket(
+    background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+):
     """Cetak semula tiket bagi pesakit terakhir yang diproses"""
     last_patient = (
         db.query(PatientQueue)
         .filter(
             PatientQueue.is_served == True,
             PatientQueue.systmone_queue_no.isnot(None),
-            PatientQueue.systmone_queue_no != "DIBATALKAN"
+            PatientQueue.systmone_queue_no != "DIBATALKAN",
         )
         .order_by(PatientQueue.id.desc())
         .first()
@@ -201,6 +207,7 @@ def reprint_last_ticket(background_tasks: BackgroundTasks, db: Session = Depends
 # 2. STESEN PRA-GILIRAN (PRE-QUEUE STATION)
 # ==========================================
 
+
 @router.get("/station", response_class=HTMLResponse)
 def get_prequeue_station(request: Request, db: Session = Depends(get_db)):
     """Memaparkan stesen saringan bersama senarai menunggu awal"""
@@ -214,10 +221,7 @@ def get_prequeue_station(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request=request,
         name="prequeue_station.html",
-        context={
-            "request": request,
-            "patients": patients
-        }
+        context={"request": request, "patients": patients},
     )
 
 
@@ -225,29 +229,35 @@ def get_prequeue_station(request: Request, db: Session = Depends(get_db)):
 def get_patient_card(request: Request, patient_id: int, db: Session = Depends(get_db)):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if not patient:
-        return HTMLResponse("<div class='p-4 text-xs text-rose-500 font-bold'>Pesakit tidak dijumpai.</div>")
-    
+        return HTMLResponse(
+            "<div class='p-4 text-xs text-rose-500 font-bold'>Pesakit tidak dijumpai.</div>"
+        )
+
     return templates.TemplateResponse(
         request=request,
         name="partials/active_patient_card.html",
-        context={
-            "p": patient,
-            "patient": patient  
-        }
+        context={"p": patient, "patient": patient},
     )
 
 
 @router.get("/station/scan-select/{scanned_code}", response_class=HTMLResponse)
-def scan_select_patient(request: Request, scanned_code: str, db: Session = Depends(get_db)):
+def scan_select_patient(
+    request: Request, scanned_code: str, db: Session = Depends(get_db)
+):
     clean_code = scanned_code.strip().upper().replace("-", "")
-    
-    patient = db.query(PatientQueue).filter(
-        or_(
-            PatientQueue.token_code == scanned_code.strip().upper(),
-            PatientQueue.ic_passport.like(f"%{clean_code}%")
-        ),
-        PatientQueue.is_served == False
-    ).order_by(PatientQueue.id.desc()).first()
+
+    patient = (
+        db.query(PatientQueue)
+        .filter(
+            or_(
+                PatientQueue.token_code == scanned_code.strip().upper(),
+                PatientQueue.ic_passport.like(f"%{clean_code}%"),
+            ),
+            PatientQueue.is_served == False,
+        )
+        .order_by(PatientQueue.id.desc())
+        .first()
+    )
 
     if not patient:
         return HTMLResponse("""
@@ -261,10 +271,7 @@ def scan_select_patient(request: Request, scanned_code: str, db: Session = Depen
     return templates.TemplateResponse(
         request=request,
         name="partials/active_patient_card.html",
-        context={
-            "p": patient,
-            "patient": patient  
-        }
+        context={"p": patient, "patient": patient},
     )
 
 
@@ -281,19 +288,25 @@ async def process_station_ticket(
     fasting: Optional[str] = Form(None),
     test_type: Optional[List[str]] = Form([]),
     lab_notes: Optional[str] = Form(""),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     if not patient_id:
-        return HTMLResponse("<div class='p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold'>⚠️ Sila pilih pesakit terlebih dahulu!</div>")
+        return HTMLResponse(
+            "<div class='p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold'>⚠️ Sila pilih pesakit terlebih dahulu!</div>"
+        )
 
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if not patient:
-        return HTMLResponse("<div class='p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold'>⚠️ Rekod tidak ditemui.</div>")
+        return HTMLResponse(
+            "<div class='p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold'>⚠️ Rekod tidak ditemui.</div>"
+        )
 
     background_tasks.add_task(trigger_systmone_ticket, category)
 
-    clean_num = re.sub(r'^[A-Za-z\-]+', '', patient.token_code)
-    generated_ticket = f"E-{prefix}-{clean_num}" if is_priority else f"{prefix}-{clean_num}"
+    clean_num = re.sub(r"^[A-Za-z\-]+", "", patient.token_code)
+    generated_ticket = (
+        f"E-{prefix}-{clean_num}" if is_priority else f"{prefix}-{clean_num}"
+    )
 
     patient.systmone_queue_no = generated_ticket
     patient.is_served = True
@@ -325,6 +338,7 @@ async def process_station_ticket(
 # 3. STREAM SSE & POLING SENARAI
 # ==========================================
 
+
 @router.get("/stream")
 async def sse_queue_stream(request: Request):
     async def event_generator():
@@ -336,16 +350,10 @@ async def sse_queue_stream(request: Request):
                 try:
                     await asyncio.wait_for(q.get(), timeout=20.0)
                     # Pastikan nama event tepat: "queueUpdate"
-                    yield {
-                        "event": "queueUpdate",
-                        "data": "refresh"
-                    }
+                    yield {"event": "queueUpdate", "data": "refresh"}
                 except asyncio.TimeoutError:
                     # Ping keep-alive untuk mengelakkan sambungan ditutup oleh pelayar
-                    yield {
-                        "event": "ping",
-                        "data": "keep-alive"
-                    }
+                    yield {"event": "ping", "data": "keep-alive"}
         finally:
             sse_manager.unsubscribe(q)
 
@@ -362,21 +370,21 @@ def counter_dashboard(request: Request, db: Session = Depends(get_db)):
         .all()
     )
     return templates.TemplateResponse(
-        request=request,
-        name="staff_dashboard.html",
-        context={"patients": patients}
+        request=request, name="staff_dashboard.html", context={"patients": patients}
     )
 
 
 @router.get("/queue-rows", response_class=HTMLResponse)
 def get_queue_rows(
-    request: Request, 
-    search: str = "", 
-    purpose_filter: str = "ALL", 
+    request: Request,
+    search: str = "",
+    purpose_filter: str = "ALL",
     station_mode: Optional[bool] = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    total_waiting = db.query(PatientQueue).filter(PatientQueue.is_served == False).count()
+    total_waiting = (
+        db.query(PatientQueue).filter(PatientQueue.is_served == False).count()
+    )
     query = db.query(PatientQueue).filter(PatientQueue.is_served == False)
 
     if purpose_filter and purpose_filter != "ALL":
@@ -384,7 +392,7 @@ def get_queue_rows(
 
     raw_search = search.strip()
     if raw_search:
-        clean_digits = re.sub(r'[^0-9A-Za-z]', '', raw_search).upper()
+        clean_digits = re.sub(r"[^0-9A-Za-z]", "", raw_search).upper()
         upper_search = raw_search.upper()
         conditions = []
 
@@ -411,27 +419,27 @@ def get_queue_rows(
 
     referer = request.headers.get("referer", "")
     is_station = station_mode or ("station" in referer)
-    template_name = "partials/station_rows.html" if is_station else "partials/patient_rows.html"
+    template_name = (
+        "partials/station_rows.html" if is_station else "partials/patient_rows.html"
+    )
 
     response = templates.TemplateResponse(
-        request=request,
-        name=template_name,
-        context={"patients": patients}
+        request=request, name=template_name, context={"patients": patients}
     )
-    
+
     trigger_payload = {"value": total_waiting}
     if raw_search and len(patients) == 1 and is_station:
         trigger_payload["autoSelectPatientId"] = patients[0].id
 
-    response.headers["HX-Trigger"] = json.dumps({
-        "updateQueueCount": trigger_payload
-    })
-    
+    response.headers["HX-Trigger"] = json.dumps({"updateQueueCount": trigger_payload})
+
     return response
 
 
 @router.post("/serve/{patient_id}")
-async def mark_served(patient_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def mark_served(
+    patient_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+):
     patient = db.query(PatientQueue).filter(PatientQueue.id == patient_id).first()
     if patient:
         patient.is_served = True
@@ -446,30 +454,30 @@ def copy_field(request: Request, text: str, label: str):
     if label in ["No. KP", "No. Tel", "No. Telefon"]:
         clean_text = "".join(filter(str.isalnum, clean_text))
 
-    headers = {
-        "HX-Trigger": json.dumps({
-            "triggerCopy": clean_text
-        })
-    }
+    headers = {"HX-Trigger": json.dumps({"triggerCopy": clean_text})}
 
     return templates.TemplateResponse(
         request=request,
         name="partials/toast_notification.html",
         context={"label": label},
-        headers=headers
+        headers=headers,
     )
 
 
 @router.get("/api/get-patient/{ic_passport}")
 def api_get_patient(ic_passport: str, db: Session = Depends(get_db)):
-    patient = db.query(PatientQueue).filter(
-        PatientQueue.ic_passport == ic_passport.strip().upper(),
-        PatientQueue.is_served == False
-    ).first()
-    
+    patient = (
+        db.query(PatientQueue)
+        .filter(
+            PatientQueue.ic_passport == ic_passport.strip().upper(),
+            PatientQueue.is_served == False,
+        )
+        .first()
+    )
+
     if not patient:
         return {"found": False}
-        
+
     return {
         "found": True,
         "id": patient.id,
@@ -479,5 +487,5 @@ def api_get_patient(ic_passport: str, db: Session = Depends(get_db)):
         "address_status": patient.address_status,
         "purpose": patient.visit_purpose,
         "token": patient.token_code,
-        "systmone_queue": patient.systmone_queue_no
+        "systmone_queue": patient.systmone_queue_no,
     }

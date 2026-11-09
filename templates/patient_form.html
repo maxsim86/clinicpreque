@@ -6,7 +6,7 @@
     <title>Pendaftaran Pra-Giliran KK Pandamaran</title>
     
     <!-- Script Tailwind & HTMX -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/tailwind.min.css') }}">
     <script src="{{ url_for('static', path='js/htmx.min.js') }}"></script>
 
     <style>
@@ -158,7 +158,6 @@
             }
         }
 
-        // Pengendali pemilihan butang tujuan kehadiran 2x2
         function setPurpose(value, index) {
             const hiddenInput = document.getElementById('selected_visit_purpose');
             if (hiddenInput) {
@@ -177,7 +176,6 @@
             }
         }
 
-        // Format No. KP secara automatik (cth: 900101-10-5555)
         function formatIC(input) {
             let val = input.value.toUpperCase().replace(/\D/g, '');
             if (val.length > 6 && val.length <= 8) {
@@ -189,7 +187,6 @@
             }
         }
 
-        // Semakan zon poskod KK Pandamaran
         async function lookupPostcode(postcode) {
             const feedback = document.getElementById('postcode_feedback');
             const cityDisplay = document.getElementById('city_display');
